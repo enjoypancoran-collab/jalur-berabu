@@ -1,0 +1,66 @@
+/*
+  Jalur Berabu - style.css
+  Lapis 2: TATA LETAK FUNGSIONAL SAJA. Palet, tipografi, partikel abu, dan
+  vignette menyusul di lapis 4. Tidak ada gambar dirujuk dari sini.
+*/
+
+body {
+  margin: 1rem;
+  font-family: system-ui, sans-serif;
+  line-height: 1.4;
+}
+
+#kemajuan {
+  font-weight: bold;
+}
+
+.hud {
+  font-family: ui-monospace, monospace;
+  white-space: pre;
+  border: 1px solid;
+  padding: 0.5rem;
+  margin: 0.5rem 0 1rem;
+}
+
+.panel-panel {
+  display: flex;
+  gap: 1.5rem;
+  align-items: flex-start;
+}
+
+.panel {
+  flex: 1 1 0;
+  min-width: 0;
+  border: 1px solid;
+  padding: 0.75rem;
+}
+
+/* Panel yang menunggu giliran: diredupkan, TIDAK PERNAH disembunyikan. */
+.panel.redup {
+  opacity: 0.4;
+  filter: grayscale(1);
+}
+
+.panel-isi button {
+  display: block;
+  margin: 0.35rem 0;
+  text-align: left;
+}
+
+#kenapa-catatan {
+  border-left: 3px solid;
+  padding-left: 0.5rem;
+  font-style: italic;
+}
+
+.catatan-gambar {
+  opacity: 0.6;
+  font-size: 0.9em;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    transition: none !important;
+    animation: none !important;
+  }
+}

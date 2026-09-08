@@ -4,296 +4,63 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Jalur Berabu</title>
+  <link rel="stylesheet" href="style.css">
 </head>
 <body>
   <!--
-    Lapis 1 (urutan pembangunan CLAUDE.md): muat content.json saat runtime,
-    jalankan mesin dengan tampilan teks polos. Tanpa CSS, tanpa gambar.
-    Perlu server lokal karena memakai ES module + fetch:
-      python -m http.server   lalu buka http://localhost:8000/
+    Lapis 2: peralihan layar, tombol, pintasan papan ketik. Dua panel
+    berdampingan. Belum ada CSS cantik, belum ada gambar.
+    Perlu server lokal (ES module + fetch):
+      node tools/serve.mjs      lalu buka http://localhost:8000/
   -->
-  <h1>Jalur Berabu</h1>
   <p id="status">Memuat content.json&hellip;</p>
 
-  <div id="app" hidden>
-    <h2>Uji angka acuan</h2>
-    <p>Menjalankan rute paling aman lewat mesin pada faktor angin 1,0 dan masker KN95 rapat.</p>
-    <button type="button" id="tombolUji">Hitung angka acuan</button>
-    <pre id="hasilUji"></pre>
+  <!-- Layar judul -->
+  <section id="layar-judul" class="layar" hidden>
+    <h1 id="judul"></h1>
+    <p id="subjudul"></p>
+    <p id="peringatan-suara"></p>
+    <button type="button" id="tombol-mulai"></button>
+    <p>
+      <button type="button" id="tombol-uji">Uji angka acuan</button>
+    </p>
+    <pre id="hasil-uji"></pre>
+  </section>
 
-    <hr>
+  <!-- Tiga kartu pembuka -->
+  <section id="layar-kartu" class="layar" hidden>
+    <p id="kartu-nomor"></p>
+    <p id="kartu-teks"></p>
+    <p id="kartu-gambar" class="catatan-gambar"></p>
+    <button type="button" id="tombol-kartu"></button>
+  </section>
 
-    <h2>Main satu pagi</h2>
+  <!-- Permainan: 14 keputusan bergantian -->
+  <section id="layar-main" class="layar" hidden>
     <p id="kemajuan"></p>
-    <p id="ppav"></p>
-    <div id="adegan"></div>
-  </div>
+    <div class="hud" id="hud"></div>
+    <div class="panel-panel">
+      <div class="panel" id="panel-cho">
+        <h2 id="nama-cho"></h2>
+        <div class="panel-isi" id="isi-cho"></div>
+      </div>
+      <div class="panel" id="panel-ones">
+        <h2 id="nama-ones"></h2>
+        <div class="panel-isi" id="isi-ones"></div>
+      </div>
+    </div>
+    <p id="kenapa-catatan" hidden></p>
+    <p id="bantuan-pintasan" class="catatan-gambar"></p>
+  </section>
 
-  <script type="module">
-    import {
-      jalankanRute,
-      hitungWfh,
-      urutanKeputusan,
-      undiFaktorAngin,
-      bulatkanSatuDesimal,
-    } from './engine.js';
+  <!-- Layar tiba -->
+  <section id="layar-tiba" class="layar" hidden>
+    <h2>Tiba</h2>
+    <p id="tiba-teks"></p>
+    <div class="hud" id="hud-tiba"></div>
+    <button type="button" id="tombol-ulang"></button>
+  </section>
 
-    let content;
-    let sesi;
-
-    const el = (id) => document.getElementById(id);
-    const fmt1 = (n) => bulatkanSatuDesimal(n).toFixed(1).replace('.', ',');
-    const koma = (n) => String(n).replace('.', ',');
-
-    async function mulai() {
-      try {
-        const res = await fetch('content.json', { cache: 'no-store' });
-        if (!res.ok) throw new Error('HTTP ' + res.status);
-        content = await res.json();
-      } catch (e) {
-        el('status').textContent =
-          'Tidak bisa memuat content.json (' + e.message + '). ' +
-          'Buka lewat server lokal: jalankan  python -m http.server  di folder ini, ' +
-          'lalu buka http://localhost:8000/';
-        return;
-      }
-
-      el('status').hidden = true;
-      el('app').hidden = false;
-      el('tombolUji').addEventListener('click', () => {
-        el('hasilUji').textContent = ujiAcuan();
-      });
-
-      sesi = {
-        angin: undiFaktorAngin(content).nilai,
-        // Lapis 1: samakan dengan asumsi angka acuan. Lapisan berikutnya
-        // menurunkan faktor masker dari barang yang dibawa Si Ones.
-        maskerId: 'kn95_rapat',
-        urutan: urutanKeputusan(content),
-        langkah: 0,
-        pilihanCho: [],
-        pilihanOnes: [],
-        barang: [],
-        serempet: false,
-      };
-      render();
-    }
-
-    function cfg() {
-      return { faktorAngin: sesi.angin, faktorMaskerId: sesi.maskerId };
-    }
-
-    function ujiAcuan() {
-      const a = content.angka_acuan;
-      const c = { faktorAngin: 1, faktorMaskerId: 'kn95_rapat' };
-      const cho = jalankanRute(content, c, 'cho', a.rute_optimal_cho, {});
-      const ones = jalankanRute(content, c, 'ones', a.rute_optimal_ones, {
-        barang: a.barang_optimal_ones,
-      });
-      const wfh = hitungWfh(content);
-      const baris = [
-        ['Rute paling aman Bro Cho (poin)', bulatkanSatuDesimal(cho.paparan), a.cho_optimal],
-        ['Rute paling aman Si Ones (poin)', bulatkanSatuDesimal(ones.paparan), a.ones_optimal],
-        ['Rute bekerja dari rumah (poin)', bulatkanSatuDesimal(wfh.paparan), a.rute_wfh],
-        ['Menit Si Ones di udara terbuka', ones.menitUdaraTerbuka, a.ones_menit_udara_terbuka],
-      ];
-      const semua = baris.every(([, d, h]) => d === h);
-      const teks = baris
-        .map(
-          ([n, d, h]) =>
-            (d === h ? '  OK   ' : 'GAGAL  ') + n +
-            '\n         didapat    : ' + koma(d) +
-            '\n         diharapkan : ' + koma(h),
-        )
-        .join('\n');
-      return (semua ? 'Empat angka acuan cocok.' : 'Ada baris yang meleset.') + '\n\n' + teks;
-    }
-
-    function totalSekarang() {
-      const cho = jalankanRute(content, cfg(), 'cho', sesi.pilihanCho, {
-        serempet: sesi.serempet,
-      });
-      const ones = jalankanRute(content, cfg(), 'ones', sesi.pilihanOnes, {
-        barang: sesi.barang,
-      });
-      return { cho, ones };
-    }
-
-    function tampilPpav() {
-      const t = totalSekarang();
-      el('ppav').textContent =
-        content.label.paparan_penuh +
-        ' — Bro Cho: ' + fmt1(t.cho.paparan) + ' poin' +
-        '  |  Si Ones: ' + fmt1(t.ones.paparan) + ' poin';
-    }
-
-    function render() {
-      const total = sesi.urutan.length;
-      if (sesi.langkah >= total) {
-        layarHasil();
-        return;
-      }
-
-      const k = sesi.urutan[sesi.langkah];
-      el('kemajuan').textContent =
-        'Keputusan ' + (sesi.langkah + 1) + ' dari ' + total +
-        '  ·  ' + (k.tokoh === 'cho' ? 'Bro Cho' : 'Si Ones') +
-        '  ·  ' + k.jam;
-      tampilPpav();
-
-      const box = el('adegan');
-      box.replaceChildren();
-      const sit = document.createElement('p');
-      sit.textContent = k.kalimat_situasi || '';
-      box.append(sit);
-
-      if (k.tipe === 'pilih_barang') {
-        renderBarang(k, box);
-        return;
-      }
-      renderPilihan(k, box);
-    }
-
-    function renderPilihan(k, box) {
-      for (const p of k.pilihan) {
-        const b = document.createElement('button');
-        b.type = 'button';
-        // Biaya waktu di tombol; biaya Poin Paparan Abu Vulkanik tidak pernah di tombol.
-        b.textContent = p.label + '  (+' + (p.biaya_menit || 0) + ' menit)';
-        b.addEventListener('click', () => pilih(k, p));
-        box.append(b, document.createElement('br'));
-      }
-    }
-
-    function pilih(k, p) {
-      if (k.tokoh === 'cho') sesi.pilihanCho.push(p.id);
-      else sesi.pilihanOnes.push(p.id);
-
-      if (p.efek && p.efek.peluang_serempet !== undefined) {
-        sesi.serempet = Math.random() < p.efek.peluang_serempet;
-      }
-      akibatLaluLanjut(k, p);
-    }
-
-    function akibatLaluLanjut(k, p) {
-      const box = el('adegan');
-      box.replaceChildren();
-
-      const a = document.createElement('p');
-      a.textContent = (p && p.kalimat_akibat) || k.kalimat_akibat || '';
-      box.append(a);
-
-      if (sesi.serempet && p && p.efek && p.efek.kalimat_serempet) {
-        const s = document.createElement('p');
-        s.textContent = p.efek.kalimat_serempet;
-        box.append(s);
-      }
-
-      tampilPpav();
-
-      const lanjut = document.createElement('button');
-      lanjut.type = 'button';
-      lanjut.textContent = content.label.tombol.lanjut;
-      lanjut.addEventListener('click', () => {
-        sesi.langkah += 1;
-        render();
-      });
-      box.append(lanjut);
-    }
-
-    function renderBarang(k, box) {
-      const info = document.createElement('p');
-      info.textContent = 'Pilih ' + k.slot + ' barang.';
-      box.append(info);
-
-      const dipilih = new Set();
-      const lanjut = document.createElement('button');
-      lanjut.type = 'button';
-      lanjut.textContent = content.label.tombol.lanjut;
-      lanjut.disabled = true;
-
-      for (const it of content.barang) {
-        const id = 'brg_' + it.id;
-        const cb = document.createElement('input');
-        cb.type = 'checkbox';
-        cb.id = id;
-        cb.addEventListener('change', () => {
-          if (cb.checked) {
-            if (dipilih.size >= k.slot) {
-              cb.checked = false;
-              return;
-            }
-            dipilih.add(it.id);
-          } else {
-            dipilih.delete(it.id);
-          }
-          lanjut.disabled = dipilih.size !== k.slot;
-        });
-        const lab = document.createElement('label');
-        lab.htmlFor = id;
-        lab.textContent = ' ' + it.nama;
-        box.append(cb, lab, document.createElement('br'));
-      }
-
-      lanjut.addEventListener('click', () => {
-        sesi.barang = [...dipilih];
-        akibatLaluLanjut(k, null);
-      });
-      box.append(document.createElement('br'), lanjut);
-    }
-
-    function layarHasil() {
-      el('kemajuan').textContent = 'Selesai.';
-      const cho = jalankanRute(content, cfg(), 'cho', sesi.pilihanCho, {
-        serempet: sesi.serempet,
-      });
-      const ones = jalankanRute(content, cfg(), 'ones', sesi.pilihanOnes, {
-        barang: sesi.barang,
-      });
-      const wfh = hitungWfh(content);
-      const a = content.angka_acuan;
-
-      tampilPpav();
-      const box = el('adegan');
-      box.replaceChildren();
-
-      const baris = [
-        content.label.paparan_penuh + ' Bro Cho: ' + fmt1(cho.paparan) +
-          ' poin  (rute paling aman: ' + fmt1(a.cho_optimal) + ' poin)',
-        content.label.paparan_penuh + ' Si Ones: ' + fmt1(ones.paparan) +
-          ' poin  (rute paling aman: ' + fmt1(a.ones_optimal) + ' poin)',
-        'Menit Si Ones di udara terbuka: ' + ones.menitUdaraTerbuka +
-          '  (rute paling aman: ' + a.ones_menit_udara_terbuka + ')',
-        'Rute bekerja dari rumah: ' + fmt1(wfh.paparan) + ' poin ' +
-          content.label.paparan_penuh,
-        'Ambang aman: ' + fmt1(content.konstanta.ambang_aman) + ' poin',
-      ];
-      if (sesi.pilihanCho.includes('c1-info')) {
-        baris.push('Faktor angin sesi ini: ' + fmt1(sesi.angin));
-      }
-      for (const t of baris) {
-        const p = document.createElement('p');
-        p.textContent = t;
-        box.append(p);
-      }
-
-      const ulang = document.createElement('button');
-      ulang.type = 'button';
-      ulang.textContent = content.label.tombol.ulang;
-      ulang.addEventListener('click', () => location.reload());
-      box.append(ulang);
-    }
-
-    // Aturan antarmuka CLAUDE.md: di bawah 600 piksel, satu kalimat saja.
-    if (window.matchMedia && window.matchMedia('(max-width: 599px)').matches) {
-      document.body.replaceChildren();
-      const p = document.createElement('p');
-      p.textContent =
-        'Layar terlalu sempit. Buka di laptop dengan lebar minimal 1024 piksel.';
-      document.body.append(p);
-    } else {
-      mulai();
-    }
-  </script>
+  <script type="module" src="ui.js"></script>
 </body>
 </html>
