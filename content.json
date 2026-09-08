@@ -1,0 +1,1420 @@
+{
+  "meta": {
+    "judul": "Jalur Berabu",
+    "subjudul": "Bagaimana Si Ones dan Bro Cho Mencapai Gadog Dalam Kondisi Abu Vulkanik",
+    "versi": "1.0",
+    "bahasa": "id-ID",
+    "audiens": "Pegawai Pusdiklat Anggaran dan Perbendaharaan, BPPK, Kementerian Keuangan",
+    "durasi_main_menit": [
+      5,
+      10
+    ],
+    "latar_waktu": "Senin pagi, 7 September 2026",
+    "berkas_ini": "Sumber kebenaran tunggal. Kalau angka atau kalimat di sini berbeda dengan dokumen konsep, yang berlaku adalah berkas ini."
+  },
+  "label": {
+    "paparan_penuh": "Poin Paparan Abu Vulkanik",
+    "paparan_singkat": "Poin Paparan Abu Vulkanik",
+    "satuan": "poin",
+    "aturan_penulisan": [
+      "Tulis lengkap 'Poin Paparan Abu Vulkanik' di setiap tempat angka paparan muncul: HUD dua panel, Layar Hitung, kartu memo, layar gagal, layar rute WFH, papan skor, dan layar koleksi.",
+      "JANGAN pernah memakai singkatan PP, PPAV, atau sekadar 'Paparan' di teks yang dilihat pemain. Singkatan hanya boleh hidup di dalam kode dan nama variabel.",
+      "Di HUD yang sempit, tulis label penuh di atas kedua batang sekali saja, lalu nama tokoh di bawah masing-masing batang. Jangan potong labelnya untuk menghemat ruang; kecilkan hurufnya kalau perlu.",
+      "Angka selalu ditampilkan satu desimal dengan koma sebagai pemisah, misalnya 7,9.",
+      "Setiap kali angka disebut dalam kalimat penuh, ikutkan satuannya: '7,9 poin'."
+    ],
+    "contoh_hud": "Poin Paparan Abu Vulkanik\n  Bro Cho  ███░░░░░░░  2,1        Si Ones  ██████░░░░  6,4",
+    "jam": "Waktu setempat, format 24 jam dengan titik, misalnya 07.30",
+    "tombol": {
+      "lanjut": "Lanjut",
+      "kenapa": "Kenapa?",
+      "mulai": "Mulai pagi",
+      "salin": "Salin hasil",
+      "suara": "Suara",
+      "bantuan": "Bantuan",
+      "ulang": "Mulai ulang",
+      "koleksi": "Lihat koleksi"
+    }
+  },
+  "konstanta": {
+    "rumus": "pp_segmen = menit x laju_ruas x faktor_masker x faktor_angin",
+    "faktor_angin_hanya_berlaku_di": "segmen dengan luar_ruangan = true",
+    "jam_absen": "07.30",
+    "laju_ruas": {
+      "rumah_tertutup": 0.003,
+      "teras_basah": 0.5,
+      "mobil_recirculate": 0.02,
+      "mobil_udara_luar": 1.0,
+      "mobil_jendela_terbuka": 2.0,
+      "bus_tengah": 0.6,
+      "bus_belakang": 1.0,
+      "bus_dekat_pintu": 1.6,
+      "jpo_beratap": 0.8,
+      "halte_berdinding": 1.3,
+      "halte_dekat_jalur": 1.8,
+      "trotoar": 2.2,
+      "pinggir_jalan": 3.0,
+      "ojek_helm_tertutup": 2.6,
+      "ojek_kepala_terbuka": 3.4,
+      "menyapu_abu_kering": 4.5
+    },
+    "faktor_masker": {
+      "tanpa_masker": 1.0,
+      "masker_kain": 0.56,
+      "masker_bedah": 0.35,
+      "kn95_rapat": 0.09,
+      "kn95_longgar": 0.45
+    },
+    "faktor_angin": [
+      {
+        "nilai": 0.8,
+        "label": "angin membawa abu menjauh"
+      },
+      {
+        "nilai": 1.0,
+        "label": "normal"
+      },
+      {
+        "nilai": 1.3,
+        "label": "abu terkonsentrasi"
+      }
+    ],
+    "faktor_angin_catatan": "Diundi sekali per sesi. Terungkap ke pemain hanya kalau C1 pilihan pertama diambil.",
+    "kontak_kulit_lengan_terbuka": {
+      "pp_per_menit": 0.3,
+      "berlaku_di": "segmen luar_ruangan milik Bro Cho, kalau flag lengan_terbuka aktif"
+    },
+    "ambang": [
+      {
+        "maks": 5.0,
+        "status": "Aman"
+      },
+      {
+        "maks": 15.0,
+        "status": "Terpapar ringan"
+      },
+      {
+        "maks": 40.0,
+        "status": "Terpapar sedang"
+      },
+      {
+        "maks": 70.0,
+        "status": "Terpapar berat"
+      },
+      {
+        "maks": null,
+        "status": "Gagal"
+      }
+    ],
+    "ambang_aman": 5.0
+  },
+  "angka_acuan": {
+    "catatan": "Diverifikasi dengan menjalankan model di berkas ini pada faktor angin 1,0 dan masker KN95 rapat 0,09. Kalau hasil kode meleset dari angka ini, yang salah kodenya, bukan rancangannya.",
+    "cho_optimal": 2.4,
+    "ones_optimal": 7.9,
+    "ambang_aman": 5.0,
+    "rute_wfh": 0.4,
+    "ones_menit_udara_terbuka": 47,
+    "rute_optimal_cho": [
+      "c1-info",
+      "c2-siram",
+      "c3-recirculate",
+      "c4-pelan",
+      "c5-beri",
+      "c6-semprot",
+      "c7-luar"
+    ],
+    "rute_optimal_ones": [
+      "o1-tutup",
+      "o3-fullface",
+      "o4-dinding",
+      "o5-tengah",
+      "o6-lurus",
+      "o7-tutup"
+    ],
+    "barang_optimal_ones": [
+      "kn95",
+      "goggle",
+      "botol_air",
+      "kantong_plastik"
+    ],
+    "perhitungan_rute_wfh": "145 menit (05.05 sampai 07.30) x laju rumah_tertutup 0,003 = 0,435, dibulatkan 0,4",
+    "menit_udara_terbuka_definisi": "Jumlah menit pada segmen dengan luar_ruangan = true DAN hitung_menit_terbuka bukan false. Segmen parkiran ke pintu gedung dikecualikan karena sudah di lingkungan kantor, bukan bagian rantai perjalanan."
+  },
+  "barang": [
+    {
+      "id": "kn95",
+      "nama": "Masker KN95",
+      "ikon": "item_kn95.png",
+      "dibawa": "Faktor masker 0,09 di semua ruas",
+      "ditinggal": "Terpaksa pakai masker kain (0,56) atau tanpa masker sama sekali (1,00)"
+    },
+    {
+      "id": "goggle",
+      "nama": "Goggle over-the-glasses",
+      "ikon": "item_kacamata.png",
+      "dibawa": "Kejadian mata perih tidak pernah muncul",
+      "ditinggal": "Kejadian mata perih muncul di O3 atau O6"
+    },
+    {
+      "id": "botol_air",
+      "nama": "Botol air",
+      "ikon": "item_botolair.png",
+      "dibawa": "Membuka pilihan membilas mata saat kejadian mata perih",
+      "ditinggal": "Saat mata perih, hanya tersisa menggosok atau menahan"
+    },
+    {
+      "id": "kantong_plastik",
+      "nama": "Kantong plastik",
+      "ikon": "item_kantong.png",
+      "dibawa": "Masker bekas bisa disimpan rapat saat masuk mobil carpool di O7",
+      "ditinggal": "Masker ditaruh di pangkuan, abu di permukaan luarnya lepas di kabin, +1,6 poin"
+    },
+    {
+      "id": "baju_ganti",
+      "nama": "Baju ganti",
+      "ikon": "item_bajuganti.png",
+      "dibawa": "Bisa berganti setelah tiba, memutus paparan sisa dari kain yang berabu",
+      "ditinggal": "Debu di kemeja menempel sepanjang jam kerja, +1,0 poin di epilog"
+    },
+    {
+      "id": "masker_kain",
+      "nama": "Masker kain cadangan",
+      "ikon": "item_maskerkain.png",
+      "dibawa": "Bisa diberikan ke penumpang carpool lain, membuka lencana Solidaritas Kabin dari sisi Si Ones",
+      "ditinggal": "Kalau Bro Cho juga tidak mengulurkan masker di SPBU, kabin carpool jadi lebih kotor untuk semua"
+    },
+    {
+      "id": "lensa_kontak",
+      "nama": "Lensa kontak",
+      "ikon": "item_lensakontak.png",
+      "dibawa": "Kejadian mata perih pasti muncul dan hukumannya dua kali lipat",
+      "ditinggal": "Tidak ada akibat, dan itu memang jawabannya"
+    },
+    {
+      "id": "payung",
+      "nama": "Payung",
+      "ikon": "item_payung.png",
+      "dibawa": "Tidak ada akibat apa pun",
+      "ditinggal": "Tidak ada akibat apa pun"
+    },
+    {
+      "id": "powerbank",
+      "nama": "Powerbank",
+      "ikon": "item_powerbank.png",
+      "dibawa": "Tidak ada akibat apa pun",
+      "ditinggal": "Tidak ada akibat apa pun"
+    }
+  ],
+  "keputusan": [
+    {
+      "id": "C1",
+      "tokoh": "cho",
+      "jam": "06.05",
+      "urutan": 1,
+      "latar": "bg_cho_kamar.png",
+      "tokoh_aset": "cho_calm",
+      "kalimat_situasi": "Alarm berbunyi dan grup kantor sudah penuh notifikasi sejak subuh. Di luar jendela, abu masih turun tipis.",
+      "catatan_mesin": "Segmen 25 menit di kamar (06.05-06.30) dibebankan seluruhnya di sini; C2 hanya menambah menit di luar ruangan.",
+      "pilihan": [
+        {
+          "id": "c1-info",
+          "label": "Cek Magma Indonesia dan info BMKG, lalu ambil jaket lengan panjang",
+          "biaya_menit": 5,
+          "segmen": [
+            {
+              "menit": 25,
+              "laju": "rumah_tertutup",
+              "luar_ruangan": false
+            }
+          ],
+          "pp_tetap": 0.0,
+          "kalimat_akibat": "Peta sebaran di layar HP menunjukkan angin datang dari barat daya pagi ini. Bro Cho mengambil jaket sebelum berangkat ke kantor.",
+          "efek": {
+            "ungkap_faktor_angin": true,
+            "aset_tokoh": "cho_jacket",
+            "lengan_terbuka": false
+          }
+        },
+        {
+          "id": "c1-batik",
+          "label": "Langsung bersiap dengan batik lengan pendek seperti biasa",
+          "biaya_menit": 0,
+          "segmen": [
+            {
+              "menit": 25,
+              "laju": "rumah_tertutup",
+              "luar_ruangan": false
+            }
+          ],
+          "pp_tetap": 0.0,
+          "kalimat_akibat": "Bro Cho keluar kamar tanpa melihat perkembangan kondisi abu vulkanik. Dia tidak memakai jaket sehingga lengannya terbuka sampai siku.",
+          "efek": {
+            "lengan_terbuka": true
+          },
+          "kartu_fakta": 1
+        },
+        {
+          "id": "c1-sosmed",
+          "label": "Gulir media sosial dulu",
+          "biaya_menit": 8,
+          "segmen": [
+            {
+              "menit": 25,
+              "laju": "rumah_tertutup",
+              "luar_ruangan": false
+            }
+          ],
+          "pp_tetap": 0.0,
+          "kalimat_akibat": "Dua konten sosmed bilang abu vulkanik sudah reda, satu akun sosmed bilang abunya makin tebal. Namun tidak ada yang menyebut sumber informasi itu. Bro Cho menghabiskan 8 menit tanpa kesimpulan yang berarti.",
+          "efek": {
+            "lengan_terbuka": true,
+            "kabar_simpang_siur": true
+          },
+          "kartu_fakta": 1
+        }
+      ]
+    },
+    {
+      "id": "C2",
+      "tokoh": "cho",
+      "jam": "06.12",
+      "urutan": 2,
+      "latar": "bg_cho_carport.png",
+      "tokoh_aset": "cho_calm|cho_jacket",
+      "kalimat_situasi": "Mobil di carport berlapis abu tebal. Kaca depannya nyaris tidak tembus pandang.",
+      "pilihan": [
+        {
+          "id": "c2-wiper",
+          "label": "Nyalakan wiper langsung",
+          "biaya_menit": 2,
+          "segmen": [
+            {
+              "menit": 2,
+              "laju": "trotoar",
+              "luar_ruangan": true
+            }
+          ],
+          "pp_tetap": 1.5,
+          "kalimat_akibat": "Karet wiper menyeret abu kering melintasi kaca dan meninggalkan busur halus yang sulit dihilangkan. Kaca mobil Bro Cho sekarang bergaris.",
+          "efek": {
+            "kaca_tergores": true
+          },
+          "kartu_fakta": 5
+        },
+        {
+          "id": "c2-siram",
+          "label": "Siram dengan selang, lap dengan kain lembap",
+          "biaya_menit": 8,
+          "segmen": [
+            {
+              "menit": 8,
+              "laju": "trotoar",
+              "luar_ruangan": true
+            }
+          ],
+          "pp_tetap": 0.0,
+          "kalimat_akibat": "Air melarutkan abunya lebih dulu, jadi kain lap cuma membersihkan lumpur tipis. Kaca kembali bening.",
+          "efek": {
+            "kaca_bersih": true
+          }
+        },
+        {
+          "id": "c2-kering",
+          "label": "Lap dengan kain kering",
+          "biaya_menit": 5,
+          "segmen": [
+            {
+              "menit": 5,
+              "laju": "trotoar",
+              "luar_ruangan": true
+            }
+          ],
+          "pp_tetap": 5.0,
+          "kalimat_akibat": "Abu yang tadinya nempel di kap mesin naik lagi ke udara setinggi wajah. Sebagian balik lagi ke kaca.",
+          "efek": {
+            "kaca_tergores": true
+          },
+          "kartu_fakta": 5
+        }
+      ]
+    },
+    {
+      "id": "C3",
+      "tokoh": "cho",
+      "jam": "06.30",
+      "urutan": 3,
+      "latar": "bg_cho_kabin.png",
+      "tokoh_aset": "cho_mask|cho_calm",
+      "kalimat_situasi": "Mesin menyala dan panel AC berkedip. Bro Cho harus menentukan udara mana yang mengisi kabin selama satu jam ke depan.",
+      "catatan_mesin": "Laju yang dipilih di sini berlaku untuk SELURUH perjalanan mengemudi. Panjang perjalanan = 45 menit dasar + menit tambahan dari C4, C6, dan kejadian serempet. Dua menit di C5 memakai laju jendela terbuka dan dipotong dari total ini.",
+      "durasi_dasar_mengemudi": 45,
+      "pilihan": [
+        {
+          "id": "c3-recirculate",
+          "label": "Recirculate, jendela rapat",
+          "biaya_menit": 0,
+          "segmen": [
+            {
+              "menit": "MENGEMUDI",
+              "laju": "mobil_recirculate",
+              "luar_ruangan": false
+            }
+          ],
+          "pp_tetap": 0.0,
+          "kalimat_akibat": "Udara di dalam mobil berputar-putar di situ-situ saja. Sebagai konsekuensi, kaca mulai sedikit berembun."
+        },
+        {
+          "id": "c3-udaraluar",
+          "label": "Ambil udara luar biar segar",
+          "biaya_menit": 0,
+          "segmen": [
+            {
+              "menit": "MENGEMUDI",
+              "laju": "mobil_udara_luar",
+              "luar_ruangan": false
+            }
+          ],
+          "pp_tetap": 0.0,
+          "kalimat_akibat": "Kipas menarik udara dari kisi-kisi di depan kaca, tepat di tempat abu paling banyak mengendap. Dalam mobil terasa lebih segar namun berbau abu.",
+          "kartu_fakta": 4
+        },
+        {
+          "id": "c3-jendela",
+          "label": "Buka jendela sedikit",
+          "biaya_menit": 0,
+          "segmen": [
+            {
+              "menit": "MENGEMUDI",
+              "laju": "mobil_jendela_terbuka",
+              "luar_ruangan": false
+            }
+          ],
+          "pp_tetap": 0.0,
+          "kalimat_akibat": "Angin masuk membawa serta apa pun yang sedang melayang di luar. Debu halus mengendap tipis di permukaan dasbor.",
+          "kartu_fakta": 4
+        }
+      ]
+    },
+    {
+      "id": "C4",
+      "tokoh": "cho",
+      "jam": "06.40",
+      "urutan": 4,
+      "latar": "bg_cho_jalan.png",
+      "tokoh_aset": "cho_mask_tense",
+      "kalimat_situasi": "Jalan Alternatif Cibubur berdebu dan jarak pandang tinggal sekitar enam puluh meter.",
+      "catatan_mesin": "Menit di sini menambah panjang perjalanan mengemudi, jadi ikut dihitung dengan laju kabin dari C3.",
+      "pilihan": [
+        {
+          "id": "c4-pelan",
+          "label": "Turunkan kecepatan, nyalakan lampu utama",
+          "biaya_menit": 9,
+          "segmen": [],
+          "pp_tetap": 0.0,
+          "kalimat_akibat": "Bro Cho turunkan kecepatannya ke angka tiga puluh dan menyalakan lampu utama. Mobil di belakangnya ikut melambat."
+        },
+        {
+          "id": "c4-normal",
+          "label": "Pertahankan kecepatan normal",
+          "biaya_menit": 0,
+          "segmen": [],
+          "pp_tetap": 0.0,
+          "kalimat_akibat": "Menambah kecepatan tidak menambah jarak pandang, malah membuat lampu rem dari mobil di depannya muncul lebih cepat dari yang dia perkirakan.",
+          "efek": {
+            "peluang_serempet": 0.35,
+            "kalimat_serempet": "Bemper depan mobil Bro Cho menyerempet bak truk yang berhenti mendadak. Dua puluh menit habis di karena kejadian ini, di mana membuat Bro Cho harus keluar dari mobil.",
+            "serempet_menit": 20,
+            "serempet_segmen": [
+              {
+                "menit": 6,
+                "laju": "pinggir_jalan",
+                "luar_ruangan": true
+              }
+            ],
+            "aset_tokoh_setelah_serempet": "cho_tired"
+          },
+          "kartu_fakta": 6
+        },
+        {
+          "id": "c4-hazard",
+          "label": "Nyalakan lampu hazard sambil tetap melaju",
+          "biaya_menit": 0,
+          "segmen": [],
+          "pp_tetap": 0.0,
+          "kalimat_akibat": "Kedua lampu sein menyala bersamaan, membuat mobil di belakang Bro Cho tidak tahu Bro Cho mau belok ke mana.",
+          "kartu_fakta": 6
+        }
+      ]
+    },
+    {
+      "id": "C5",
+      "tokoh": "cho",
+      "jam": "06.58",
+      "urutan": 5,
+      "latar": "bg_cho_spbu.png",
+      "tokoh_aset": "cho_mask",
+      "kalimat_situasi": "Di pompa sebelah berhenti mobil rombongan carpool Si Ones, kebetulan searah ke Gadog. Lewat jendela, Bro Cho melihat masker kain seorang penumpang melorot di dagu.",
+      "catatan_mesin": "Menit jendela terbuka menggantikan menit kabin dengan laju mobil_jendela_terbuka, tidak menambah panjang perjalanan.",
+      "pilihan": [
+        {
+          "id": "c5-beri",
+          "label": "Turunkan jendela sebentar, ulurkan KN95 cadangan, tunjukkan cara menekan kawat hidungnya",
+          "biaya_menit": 0,
+          "segmen": [
+            {
+              "menit": 2,
+              "laju": "mobil_jendela_terbuka",
+              "luar_ruangan": false
+            }
+          ],
+          "pp_tetap": 0.0,
+          "kalimat_akibat": "Bro Cho menurunkan kaca sebentar dan memberikan satu masker cadangan ke mobil sebelah, sambil mencontohkan cara menekan bagian kawat hidungnya agar masker lebih ketat. Setelah itu, kedua mobil kembali berjalan beriringan.",
+          "efek": {
+            "lencana": "solidaritas_kabin",
+            "perbaiki_masker_carpool": true
+          },
+          "kartu_fakta": 3
+        },
+        {
+          "id": "c5-diam",
+          "label": "Diam saja, isi bensin lalu jalan lagi",
+          "biaya_menit": 0,
+          "segmen": [],
+          "pp_tetap": 0.0,
+          "kalimat_akibat": "Dari balik kaca, Bro Cho cuma melirik masker yang melorot di dagu orang itu tanpa berniat membetulkannya. Begitu pengisian bensin selesai, mobil pun kembali berjalan.",
+          "kartu_fakta": 3
+        },
+        {
+          "id": "c5-ngobrol",
+          "label": "Turunkan jendela dan mengobrol lama karena kebetulan bertemu",
+          "biaya_menit": 0,
+          "segmen": [
+            {
+              "menit": 6,
+              "laju": "mobil_jendela_terbuka",
+              "luar_ruangan": false
+            }
+          ],
+          "pp_tetap": 0.0,
+          "kalimat_akibat": "Kaca jendela mobil dibiarkan terbuka selama enam menit di area pom bensin. Obrolan selesai begitu saja tanpa ada masker yang berpindah tangan.",
+          "kartu_fakta": 3
+        }
+      ]
+    },
+    {
+      "id": "C6",
+      "tokoh": "cho",
+      "jam": "07.10",
+      "urutan": 6,
+      "latar": "bg_cho_tol.png",
+      "tokoh_aset": "cho_mask_tense",
+      "kalimat_situasi": "Lapisan abu tipis bertemu gerimis di Tol Jagorawi. Aspalnya licin dan kaca depan mulai buram.",
+      "pilihan": [
+        {
+          "id": "c6-jarak",
+          "label": "Jaga jarak tiga kali lipat, rem halus, hindari pengereman mendadak",
+          "biaya_menit": 0,
+          "segmen": [],
+          "pp_tetap": 0.0,
+          "kalimat_akibat": "Bro Cho menjaga jarak mobilnya lebih jauh dari biasanya. Saat truk di depan mendadak mengerem, dia cukup mengangkat kaki dari pedal gas.",
+          "kartu_fakta": 6
+        },
+        {
+          "id": "c6-wiper",
+          "label": "Wiper langsung karena kaca mulai buram",
+          "biaya_menit": 0,
+          "segmen": [],
+          "pp_tetap": 0.0,
+          "kalimat_akibat": "Goresan pada kaca depan bertambah banyak. Lampu dari arah berlawanan memantul di setiap garis dan membuat pandangan makin silau.",
+          "efek": {
+            "kaca_tergores": true
+          },
+          "kartu_fakta": 5
+        },
+        {
+          "id": "c6-semprot",
+          "label": "Semprot air wiper dulu sampai abu larut, baru wiper",
+          "biaya_menit": 1,
+          "segmen": [],
+          "pp_tetap": 0.0,
+          "kalimat_akibat": "Air pembersih menyapu abu yang menempel sebelum wiper bergerak. Kaca kembali jernih tanpa suara berderit.",
+          "kartu_fakta": 5
+        }
+      ]
+    },
+    {
+      "id": "C7",
+      "tokoh": "cho",
+      "jam": "07.25",
+      "urutan": 7,
+      "latar": "bg_cho_gadog.png",
+      "tokoh_aset": "cho_mask|cho_calm",
+      "kalimat_situasi": "Mobil sudah terparkir di Gadog. Tinggal beberapa langkah ke pintu gedung.",
+      "pilihan": [
+        {
+          "id": "c7-luar",
+          "label": "Lepas masker di luar gedung, cuci tangan dan muka di wastafel dekat lobi",
+          "biaya_menit": 2,
+          "segmen": [
+            {
+              "menit": 2,
+              "laju": "trotoar",
+              "luar_ruangan": true
+            }
+          ],
+          "pp_tetap": 0.0,
+          "kalimat_akibat": "Bro Cho melepas maskernya di bawah kanopi, lalu mencuci tangan dan muka sebelum masuk ke ruangan. Yang dibawanya ke dalam hanyalah tasnya.",
+          "efek": {
+            "rantai_paparan_terputus": true
+          }
+        },
+        {
+          "id": "c7-dalam",
+          "label": "Masuk ke ruangan dulu baru lepas masker",
+          "biaya_menit": 2,
+          "segmen": [
+            {
+              "menit": 2,
+              "laju": "trotoar",
+              "luar_ruangan": true
+            }
+          ],
+          "pp_tetap": 1.0,
+          "kalimat_akibat": "Bro Cho melepas masker di meja kerja dengan sisi luarnya menghadap ke atas. Debu halus yang menempel di permukaannya ikut terbang di dalam ruangan.",
+          "kartu_fakta": 12
+        },
+        {
+          "id": "c7-meja",
+          "label": "Langsung ke meja",
+          "biaya_menit": 2,
+          "segmen": [
+            {
+              "menit": 2,
+              "laju": "trotoar",
+              "luar_ruangan": true
+            }
+          ],
+          "pp_tetap": 2.0,
+          "kalimat_akibat": "Bro Cho langsung duduk di meja kerjanya tanpa singgah ke mana-mana. Abu menyebar ke sekitar Bro Cho, sampai-sampai rekan kerja di sebelahnya harus mengelap mejanya dari abu vulkanik yang dibawa Bro Cho.",
+          "efek": {
+            "epilog_keluhan_rekan": true
+          },
+          "kartu_fakta": 12
+        }
+      ]
+    },
+    {
+      "id": "O1",
+      "tokoh": "ones",
+      "jam": "05.05",
+      "urutan": 1,
+      "latar": "bg_ones_kos.png",
+      "tokoh_aset": "ones_calm",
+      "kalimat_situasi": "Jendela kamar kos dibiarkan terbuka semalaman. Lantai kamar dan koridor depan berlapis abu tipis.",
+      "catatan_mesin": "Jendela 25 menit di kos (05.05-05.30) dibebankan di sini dan sudah mencakup O2.",
+      "pilihan": [
+        {
+          "id": "o1-tutup",
+          "label": "Tutup jendela dan ventilasi, matikan kipas yang menghadap ke luar, tunda bersih-bersih",
+          "biaya_menit": 4,
+          "segmen": [
+            {
+              "menit": 25,
+              "laju": "rumah_tertutup",
+              "luar_ruangan": false
+            }
+          ],
+          "pp_tetap": 0.0,
+          "kalimat_akibat": "Si Ones menutup jendela dan mematikan kipas angin yang mengarah ke luar. Lantainya dibiarkan kotor untuk sementara."
+        },
+        {
+          "id": "o1-sapu",
+          "label": "Sapu lantai kamar yang berdebu sebelum berangkat",
+          "biaya_menit": 6,
+          "segmen": [
+            {
+              "menit": 10,
+              "laju": "menyapu_abu_kering",
+              "luar_ruangan": false
+            },
+            {
+              "menit": 15,
+              "laju": "rumah_tertutup",
+              "luar_ruangan": false
+            }
+          ],
+          "pp_tetap": 0.0,
+          "kalimat_akibat": "Sapunya mengangkat abu vulkanik yang tadinya ada di lantai. Abu itu jadi berterbangan. Kamar Si Ones dan jendelanya baru saja ditutup, jadi abu itu hanya berputar-putar di dalam kamar.",
+          "kartu_fakta": 7
+        },
+        {
+          "id": "o1-siram",
+          "label": "Siram teras depan kos pakai selang biar penghuni lain tidak menginjak abu",
+          "biaya_menit": 4,
+          "segmen": [
+            {
+              "menit": 8,
+              "laju": "teras_basah",
+              "luar_ruangan": true
+            },
+            {
+              "menit": 17,
+              "laju": "rumah_tertutup",
+              "luar_ruangan": false
+            }
+          ],
+          "pp_tetap": 0.0,
+          "kalimat_akibat": "Air dari selang mendorong abu masuk ke selokan di depan kos. Teras menjadi bersih, tetapi Si Ones pergi tanpa melihat ke mana abu itu mengalir.",
+          "efek": {
+            "picu_selokan_tersumbat": true
+          },
+          "kartu_fakta": 8
+        }
+      ]
+    },
+    {
+      "id": "O2",
+      "tokoh": "ones",
+      "jam": "05.20",
+      "urutan": 2,
+      "latar": "bg_ones_meja.png",
+      "tokoh_aset": null,
+      "kalimat_situasi": "Sembilan barang tergeletak di meja. Ranselnya cuma muat empat.",
+      "tipe": "pilih_barang",
+      "slot": 4,
+      "kalimat_akibat": "Empat barang masuk ke dalam ransel, lima lainnya tertinggal di meja. Si Ones langsung menutup ritsleting tanpa mengecek isi tasnya kembali.",
+      "kartu_fakta_jika_lensa": 9
+    },
+    {
+      "id": "O3",
+      "tokoh": "ones",
+      "jam": "05.30",
+      "urutan": 3,
+      "latar": "bg_ones_ojek.png",
+      "tokoh_aset": "otomatis",
+      "kalimat_situasi": "Ojeknya sudah menunggu di depan gang. Halte terlalu jauh untuk ditempuh jalan kaki, jadi naik ojek bukan pilihan melainkan keadaan.",
+      "pilihan": [
+        {
+          "id": "o3-fullface",
+          "label": "Pinjam helm full-face pengemudi, turunkan kacanya sampai tertutup penuh, minta jalan pelan",
+          "biaya_menit": 10,
+          "segmen": [
+            {
+              "menit": 10,
+              "laju": "ojek_helm_tertutup",
+              "luar_ruangan": true
+            }
+          ],
+          "pp_tetap": 0.0,
+          "kalimat_akibat": "Pengemudinya menyerahkan helm dengan kaca yang masih utuh. Si Ones menurunkan kacanya sampai tertutup sempurna."
+        },
+        {
+          "id": "o3-setengah",
+          "label": "Pakai helm setengah seperti biasa dan minta cepat",
+          "biaya_menit": 7,
+          "segmen": [
+            {
+              "menit": 7,
+              "laju": "ojek_kepala_terbuka",
+              "luar_ruangan": true
+            }
+          ],
+          "pp_tetap": 0.0,
+          "kalimat_akibat": "Motor melaju dengan kaca helm masih terbuka setengah. Si Ones sampai di halte tiga menit lebih cepat.",
+          "kartu_fakta": 2
+        },
+        {
+          "id": "o3-bukamasker",
+          "label": "Buka masker sebentar di jalan karena pengap di balik helm",
+          "biaya_menit": 7,
+          "segmen": [
+            {
+              "menit": 7,
+              "laju": "ojek_kepala_terbuka",
+              "luar_ruangan": true,
+              "faktor_masker_paksa": 1.0
+            }
+          ],
+          "pp_tetap": 0.0,
+          "kalimat_akibat": "Karet maskernya ditarik sampai ke dagu karena terasa pengap. Beberapa detik kemudian, Si Ones lupa memasangnya kembali sampai turun. Angin dari depan menerpa wajah Si Ones tanpa penghalang.",
+          "kartu_fakta": 2
+        }
+      ]
+    },
+    {
+      "id": "O4",
+      "tokoh": "ones",
+      "jam": "05.40",
+      "urutan": 4,
+      "latar": "bg_ones_halte.png",
+      "tokoh_aset": "otomatis",
+      "kalimat_situasi": "Papan di halte menunjukkan bus berikutnya delapan belas menit lagi.",
+      "pilihan": [
+        {
+          "id": "o4-dinding",
+          "label": "Berdiri di bagian berdinding, jauh dari bukaan",
+          "biaya_menit": 18,
+          "segmen": [
+            {
+              "menit": 18,
+              "laju": "halte_berdinding",
+              "luar_ruangan": true
+            }
+          ],
+          "pp_tetap": 0.0,
+          "kalimat_akibat": "Si Ones berdiri merapat ke dinding belakang halte, di bagian yang tertutup. Delapan belas menit berlalu di sana."
+        },
+        {
+          "id": "o4-bangku",
+          "label": "Duduk di bangku dekat jalur kendaraan",
+          "biaya_menit": 18,
+          "segmen": [
+            {
+              "menit": 18,
+              "laju": "halte_dekat_jalur",
+              "luar_ruangan": true
+            }
+          ],
+          "pp_tetap": 0.0,
+          "kalimat_akibat": "Si Ones duduk di bangku yang menghadap langsung ke jalur bus. Setiap kendaraan yang lewat membawa abu vulkanik ke arah Si Ones.",
+          "kartu_fakta": 13
+        },
+        {
+          "id": "o4-buspertama",
+          "label": "Naik bus pertama yang datang meski penuh sesak",
+          "biaya_menit": 7,
+          "segmen": [
+            {
+              "menit": 7,
+              "laju": "halte_berdinding",
+              "luar_ruangan": true
+            }
+          ],
+          "pp_tetap": 0.0,
+          "kalimat_akibat": "Si Ones menyelinap masuk ke bus yang sudah penuh. Dia sampai sebelas menit lebih cepat dan berdiri tepat di samping pintu yang selalu terbuka di setiap halte.",
+          "efek": {
+            "kunci_posisi_bus": "o5-dekatpintu",
+            "matikan_pilihan": [
+              "o5-tengah"
+            ]
+          },
+          "kartu_fakta": 13
+        }
+      ]
+    },
+    {
+      "id": "O5",
+      "tokoh": "ones",
+      "jam": "05.58",
+      "urutan": 5,
+      "latar": "bg_ones_bus.png",
+      "tokoh_aset": "otomatis",
+      "kalimat_situasi": "Bus berjalan dua puluh dua menit sampai Cawang. Jendelanya tidak bisa dibuka, tapi pintunya membuka lebar di setiap halte.",
+      "pilihan": [
+        {
+          "id": "o5-tengah",
+          "label": "Berdesak ke tengah gerbong sejak naik, jauh dari kedua pintu",
+          "biaya_menit": 22,
+          "segmen": [
+            {
+              "menit": 22,
+              "laju": "bus_tengah",
+              "luar_ruangan": false
+            }
+          ],
+          "pp_tetap": 0.0,
+          "kalimat_akibat": "Si Ones mendorong diri ke tengah gerbong, sejauh mungkin dari kedua pintu. Dia berdiri berdesakan di situ selama dua puluh dua menit."
+        },
+        {
+          "id": "o5-belakang",
+          "label": "Pindah ke ujung belakang saat ada celah",
+          "biaya_menit": 24,
+          "segmen": [
+            {
+              "menit": 24,
+              "laju": "bus_belakang",
+              "luar_ruangan": false
+            }
+          ],
+          "pp_tetap": 0.0,
+          "kalimat_akibat": "Si Ones bergeser ke bagian belakang, menjauh dari pintu yang selalu terbuka di setiap halte. Dia berdiri lebih lama di tempat yang lebih tenang."
+        },
+        {
+          "id": "o5-dekatpintu",
+          "label": "Diam saja di dekat pintu",
+          "biaya_menit": 22,
+          "segmen": [
+            {
+              "menit": 22,
+              "laju": "bus_dekat_pintu",
+              "luar_ruangan": false
+            }
+          ],
+          "pp_tetap": 0.0,
+          "kalimat_akibat": "Pintu itu tetap sering terbuka sampai Cawang. Si Ones hanya menatap keluar tanpa mengatakan apa-apa.",
+          "kartu_fakta": 4
+        }
+      ]
+    },
+    {
+      "id": "O6",
+      "tokoh": "ones",
+      "jam": "06.20",
+      "urutan": 6,
+      "latar": "bg_ones_jpo.png",
+      "tokoh_aset": "otomatis",
+      "kalimat_situasi": "Dari Halte Cawang UKI ke titik kumpul rombongan cuma ada satu jalur, yaitu jembatan penyeberangan. Sekitar lima belas menit jalan kaki, lalu menunggu sampai mobilnya datang.",
+      "pilihan": [
+        {
+          "id": "o6-lurus",
+          "label": "Susuri JPO tanpa berhenti, tunggu di bawah atap tangga sambil mengirim titik lokasi",
+          "biaya_menit": 19,
+          "segmen": [
+            {
+              "menit": 15,
+              "laju": "jpo_beratap",
+              "luar_ruangan": true
+            },
+            {
+              "menit": 4,
+              "laju": "halte_berdinding",
+              "luar_ruangan": true
+            }
+          ],
+          "pp_tetap": 0.0,
+          "kalimat_akibat": "Si Ones menyusuri jembatan sampai ujung tanpa berhenti, lalu berdiri di bawah atap tangga sambil mengirim titik lokasinya. Empat menit kemudian mobilnya datang."
+        },
+        {
+          "id": "o6-tepijalan",
+          "label": "Susuri JPO, lalu turun menunggu di tepi jalan",
+          "biaya_menit": 19,
+          "segmen": [
+            {
+              "menit": 15,
+              "laju": "jpo_beratap",
+              "luar_ruangan": true
+            },
+            {
+              "menit": 4,
+              "laju": "halte_dekat_jalur",
+              "luar_ruangan": true
+            }
+          ],
+          "pp_tetap": 0.0,
+          "kalimat_akibat": "Si Ones turun sampai ke bahu jalan supaya mobilnya tidak perlu berhenti terlalu lama. Setiap kendaraan yang lewat meniupkan angin berdebu ke arahnya.",
+          "kartu_fakta": 12
+        },
+        {
+          "id": "o6-sarapan",
+          "label": "Berhenti beli sarapan di lapak tengah jembatan",
+          "biaya_menit": 22,
+          "segmen": [
+            {
+              "menit": 13,
+              "laju": "jpo_beratap",
+              "luar_ruangan": true
+            },
+            {
+              "menit": 5,
+              "laju": "jpo_beratap",
+              "luar_ruangan": true,
+              "faktor_masker_paksa": 1.0
+            },
+            {
+              "menit": 4,
+              "laju": "halte_berdinding",
+              "luar_ruangan": true
+            }
+          ],
+          "pp_tetap": 0.0,
+          "kalimat_akibat": "Si Ones berhenti di lapak pedagang yang mangkal di tengah jembatan. Maskernya turun ke dagu selama beberapa menit sambil dia makan sambil berjalan.",
+          "kartu_fakta": 2
+        }
+      ]
+    },
+    {
+      "id": "O7",
+      "tokoh": "ones",
+      "jam": "06.39",
+      "urutan": 7,
+      "latar": "bg_ones_carpool.png",
+      "tokoh_aset": "otomatis",
+      "kalimat_situasi": "Mobil rombongan masih empat puluh dua menit lagi sampai Gadog.",
+      "catatan_mesin": "Segmen 3 menit dari parkiran ke pintu gedung dibebankan di sini, karena tidak ada keputusan terpisah untuknya.",
+      "pilihan": [
+        {
+          "id": "o7-tutup",
+          "label": "Minta jendela ditutup dan AC di-recirculate, masker dilepas dan disimpan di kantong plastik",
+          "biaya_menit": 45,
+          "segmen": [
+            {
+              "menit": 42,
+              "laju": "mobil_recirculate",
+              "luar_ruangan": false
+            },
+            {
+              "menit": 3,
+              "laju": "trotoar",
+              "luar_ruangan": true,
+              "hitung_menit_terbuka": false,
+              "catatan": "Berjalan dari parkiran ke pintu gedung Gadog. Tetap menambah paparan, tapi tidak dihitung sebagai menit rantai perjalanan karena sudah berada di lingkungan kantor."
+            }
+          ],
+          "pp_tetap": 0.0,
+          "kalimat_akibat": "Si Ones melepas maskernya dan memasukkannya ke kantong plastik sebelum menutup ransel. AC hanya memutar udara yang ada di dalam ruang mobil.",
+          "efek": {
+            "tanpa_kantong_plastik": {
+              "pp_tetap": 1.6,
+              "kartu_fakta": 12,
+              "kalimat_akibat": "Maskernya dilepas lalu diletakkan di pangkuan dengan sisi luar menghadap ke atas. Perjalanan ke Gadog masih panjang."
+            }
+          }
+        },
+        {
+          "id": "o7-jendela",
+          "label": "Lepas masker dan buka jendela karena sudah di dalam mobil",
+          "biaya_menit": 45,
+          "segmen": [
+            {
+              "menit": 42,
+              "laju": "mobil_jendela_terbuka",
+              "luar_ruangan": false
+            },
+            {
+              "menit": 3,
+              "laju": "trotoar",
+              "luar_ruangan": true,
+              "hitung_menit_terbuka": false,
+              "catatan": "Berjalan dari parkiran ke pintu gedung Gadog. Tetap menambah paparan, tapi tidak dihitung sebagai menit rantai perjalanan karena sudah berada di lingkungan kantor."
+            }
+          ],
+          "pp_tetap": 0.0,
+          "kalimat_akibat": "Jendela dibuka padahal perjalanan masih panjang. Kabin yang tadinya bersih perlahan ikut dipenuhi debu.",
+          "kartu_fakta": 4
+        },
+        {
+          "id": "o7-tetap",
+          "label": "Tetap pakai masker sepanjang perjalanan",
+          "biaya_menit": 45,
+          "segmen": [
+            {
+              "menit": 42,
+              "laju": "mobil_recirculate",
+              "luar_ruangan": false
+            },
+            {
+              "menit": 3,
+              "laju": "trotoar",
+              "luar_ruangan": true,
+              "hitung_menit_terbuka": false,
+              "catatan": "Berjalan dari parkiran ke pintu gedung Gadog. Tetap menambah paparan, tapi tidak dihitung sebagai menit rantai perjalanan karena sudah berada di lingkungan kantor."
+            }
+          ],
+          "pp_tetap": 0.0,
+          "kalimat_akibat": "Si Ones membiarkan maskernya tetap terpasang sampai turun di Gadog. Rasanya tidak nyaman, tetapi maskernya tetap terpasang.",
+          "efek": {
+            "kantong_plastik_tidak_terpakai": true
+          }
+        }
+      ]
+    }
+  ],
+  "kejadian_sisipan": [
+    {
+      "id": "mata",
+      "judul": "Mata kena abu",
+      "latar": "event_mata.png",
+      "tokoh": "ones",
+      "pemicu": "goggle tidak dibawa di O2, atau lensa kontak dibawa",
+      "muncul_di": [
+        "O3",
+        "O6"
+      ],
+      "batas_waktu_detik": 5,
+      "kartu_fakta": 10,
+      "pengali_jika_lensa_kontak": 2.0,
+      "aset_jika_lensa_kontak": "ones_lensa",
+      "pilihan": [
+        {
+          "id": "mata-bilas",
+          "label": "Bilas dengan botol air, biarkan partikelnya keluar sendiri",
+          "syarat": "barang botol_air dibawa",
+          "pp_tetap": 0.0,
+          "kalimat_akibat": "Si Ones menuang air ke telapak tangannya lalu membasuh matanya pelan-pelan. Rasa perihnya berkurang setelah beberapa kali berkedip."
+        },
+        {
+          "id": "mata-gosok",
+          "label": "Gosok dengan tangan",
+          "pp_tetap": 4.0,
+          "efek": {
+            "aset_tokoh": "ones_tired"
+          },
+          "kalimat_akibat": "Si Ones menggosok matanya dengan tangan. Rasa perih berubah menjadi panas, dan matanya tetap merah sampai sore."
+        },
+        {
+          "id": "mata-tahan",
+          "label": "Tahan saja sambil terus berjalan",
+          "pp_tetap": 1.6,
+          "kalimat_akibat": "Si Ones berkedip berkali-kali sambil terus berjalan. Butiran abu akhirnya keluar sendiri, meski membutuhkan waktu."
+        }
+      ],
+      "kalimat_tambahan_jika_lensa_kontak": "Butiran abu terselip di antara lensa dan permukaan mata. Butiran abu itu terjebak dan tidak ikut keluar."
+    },
+    {
+      "id": "atap",
+      "judul": "Abu menumpuk di atap teras rumah",
+      "latar": "event_atap.png",
+      "tokoh": "cho",
+      "pemicu": "selalu",
+      "muncul_di": "antara C4 dan C5",
+      "kartu_fakta": 11,
+      "pilihan": [
+        {
+          "id": "atap-nanti",
+          "label": "Balas nanti saja, tunggu hujan abu reda baru panggil orang yang biasa membersihkan atap",
+          "pp_tetap": 0.0,
+          "kalimat_akibat": "Bro Cho membalas foto dari rumah dengan satu kalimat: nanti saja kalau sudah reda. Atap rumahnya masih bisa dibersihkan nanti."
+        },
+        {
+          "id": "atap-sekarang",
+          "label": "Minta dibersihkan sekarang juga sebelum tambah tebal",
+          "pp_tetap": 0.0,
+          "efek": {
+            "epilog": "orang yang naik atap terpeleset di abu basah"
+          },
+          "kalimat_akibat": "Bro Cho menyuruh seseorang naik ke atap saat itu juga. Orang itu naik ke atap yang licin karena abu basah yang bercampur embun pagi."
+        },
+        {
+          "id": "atap-abaikan",
+          "label": "Abaikan sepenuhnya",
+          "pp_tetap": 0.0,
+          "efek": {
+            "epilog": "atap masih tertimbun sampai sore"
+          },
+          "kalimat_akibat": "Pesan itu dibiarkan tanpa balasan. Sampai sore, abunya masih ada di sana."
+        }
+      ]
+    },
+    {
+      "id": "selokan",
+      "judul": "Selokan tersumbat",
+      "latar": "event_selokan.png",
+      "tokoh": "ones",
+      "pemicu": "pilihan o1-siram diambil",
+      "muncul_di": "epilog",
+      "tanpa_pilihan": true,
+      "kartu_fakta": 8,
+      "kalimat_akibat": "Hujan sore itu tidak masuk ke selokan. Air justru menggenang di depan kos, sementara abu yang disiram pagi tadi sudah mengeras di dasar saluran."
+    }
+  ],
+  "kartu_fakta": [
+    {
+      "id": 1,
+      "teks": "Partikel abu vulkanik berbeda dari debu biasa karena berasal dari magma yang membeku cepat sehingga bentuknya runcing dan menggores saluran napas",
+      "sumber": "USGS Volcanic Ash Impacts & Mitigation"
+    },
+    {
+      "id": 2,
+      "teks": "Bahan setara N95 menyaring lebih dari 98% partikel abu, sedangkan bahan kain yang diuji tidak sampai 44%",
+      "sumber": "IVHHN, Guidelines on Preparedness Before, During and After an Ashfall"
+    },
+    {
+      "id": 3,
+      "teks": "Yang menentukan perlindungan bukan label maskernya, melainkan kerapatannya di wajah",
+      "sumber": "IVHHN"
+    },
+    {
+      "id": 4,
+      "teks": "Di dalam kendaraan, tutup jendela dan gunakan AC mode recirculate, begitu juga AC di rumah",
+      "sumber": "IVHHN / BNPB"
+    },
+    {
+      "id": 5,
+      "teks": "Jangan menyalakan wiper pada kaca yang berlapis abu kering; larutkan dulu dengan air",
+      "sumber": "USGS"
+    },
+    {
+      "id": 6,
+      "teks": "Abu mengurangi jarak pandang dan membuat permukaan jalan licin, jadi kurangi kecepatan",
+      "sumber": "USGS"
+    },
+    {
+      "id": 7,
+      "teks": "Jangan menyapu abu dalam keadaan kering; lembapkan sedikit lalu kumpulkan dengan sekop",
+      "sumber": "IVHHN"
+    },
+    {
+      "id": 8,
+      "teks": "Jangan menyiram abu berlebihan, karena abu yang menggumpal menyumbat saluran air",
+      "sumber": "IVHHN"
+    },
+    {
+      "id": 9,
+      "teks": "Pakai kacamata pelindung, bukan lensa kontak",
+      "sumber": "IVHHN"
+    },
+    {
+      "id": 10,
+      "teks": "Kalau mata terkena abu jangan digosok; bilas dengan air bersih",
+      "sumber": "IVHHN"
+    },
+    {
+      "id": 11,
+      "teks": "Abu tebal di atap perlu dibersihkan hati-hati karena beratnya menambah beban bangunan",
+      "sumber": "USGS"
+    },
+    {
+      "id": 12,
+      "teks": "Sepulang dari luar: lepas masker di luar ruangan, mandi dan keramas, ganti baju, cuci pakaian terpapar secara terpisah",
+      "sumber": "IVHHN"
+    },
+    {
+      "id": 13,
+      "teks": "Kelompok yang perlu perhatian lebih: anak-anak, lansia, ibu hamil, dan penyandang asma atau PPOK",
+      "sumber": "IVHHN"
+    },
+    {
+      "id": 14,
+      "teks": "ASN di daerah terdampak dapat menerapkan kerja dari rumah bertahap 50%, 75%, hingga 100% menurut penilaian aspek kesehatan dan keamanan",
+      "sumber": "Pernyataan Menteri Dalam Negeri, September 2026"
+    }
+  ],
+  "lencana": [
+    {
+      "id": "kabin_rapat",
+      "nama": "Kabin Rapat",
+      "ikon": "badge_kabin.png",
+      "syarat": "AC recirculate dipilih dan jendela tidak pernah dibuka di seluruh perjalanan kedua tokoh"
+    },
+    {
+      "id": "kaca_mulus",
+      "nama": "Kaca Mulus",
+      "ikon": "badge_kaca.png",
+      "syarat": "tidak pernah menyalakan wiper pada kaca berabu kering"
+    },
+    {
+      "id": "solidaritas_kabin",
+      "nama": "Solidaritas Kabin",
+      "ikon": "badge_solidaritas.png",
+      "syarat": "masker diberikan ke orang lain, lewat C5 atau lewat masker kain cadangan Si Ones"
+    },
+    {
+      "id": "tangan_kosong",
+      "nama": "Tangan Kosong",
+      "ikon": "badge_tangankosong.png",
+      "syarat": "menyelesaikan pagi tanpa membawa KN95",
+      "nada": "lencana kelam, bukan pujian"
+    },
+    {
+      "id": "pagi_nol",
+      "nama": "Pagi Nol",
+      "ikon": "badge_paginol.png",
+      "syarat": "hanya lewat rute WFH yang terkunci"
+    }
+  ],
+  "layar": {
+    "judul": {
+      "latar": "screen_judul.png",
+      "suara": "title.intro",
+      "baris_peringatan_suara": "Permainan ini bersuara. Tekan M kapan saja untuk membisukan.",
+      "catatan": "Baris peringatan suara harus tampil SEBELUM ada bunyi apa pun keluar. Klip pertama dipicu oleh tombol Mulai pagi, bukan oleh terbukanya halaman."
+    },
+    "kartu_pembuka": [
+      {
+        "teks": "Senin pagi. Abu Anak Krakatau sudah turun sejak akhir pekan, dan kantor belum mengeluarkan kebijakan apa pun. Kamu memegang dua orang sekaligus: Bro Cho dan Si Ones.",
+        "gambar": "dua tokoh berdampingan",
+        "suara": [
+          "brief.cho",
+          "brief.ones"
+        ]
+      },
+      {
+        "teks": "Setiap pilihan yang kamu ambil dalam perjalanan Si Ones dan Bro Cho akan menambah Poin Paparan Abu Vulkanik terhadap mereka. Poin Paparan Abu Vulkanik ini tidak dapat turun angkanya, tapi dapat kamu minimalisasi dengan pilihan yang tepat.",
+        "gambar": "dua batang paparan, satu tumbuh sedikit, satu tumbuh lebih banyak"
+      },
+      {
+        "teks": "Kamu harus berpacu dengan waktu, karena Si Ones dan Bro Cho harus absen di Gadog pukul 07.30. Kalau pilihan-pilihanmu main aman, biasanya sampai kantornya lebih lambat.",
+        "gambar": "jam dan sebuah pilihan bertanda +8 menit",
+        "tombol": "Mulai pagi"
+      }
+    ],
+    "tiba": {
+      "latar": "screen_tiba.png"
+    },
+    "hitung": {
+      "latar": "screen_hitung.png",
+      "kartu_fakta_terbuka": 14,
+      "urutan": [
+        {
+          "bagian": "pembuka",
+          "suara": "tally.open",
+          "teks": [
+            "Perjalanan mereka sudah selesai. Sekarang, mari kita hitung ulang.",
+            "Rute Bro Cho — 14 kombinasi diuji",
+            "Rute Si Ones — 14 kombinasi diuji"
+          ]
+        },
+        {
+          "bagian": "tiga_baris_angka",
+          "suara": "tally.numbers",
+          "jeda_antarbaris_detik": 1,
+          "teks": [
+            "Rute paling aman yang bisa ditempuh Bro Cho akan membuatnya terpapar abu vulkanik sebesar 2,4 poin.",
+            "Rute paling aman yang bisa ditempuh Si Ones akan membuatnya terpapar abu vulkanik sebesar 7,9.",
+            "Batas aman untuk terpapar abu vulkanik adalah 5 poin."
+          ],
+          "catatan": "Dua batang Poin Paparan Abu Vulkanik milik pemain tetap terlihat di samping tiga baris ini."
+        },
+        {
+          "bagian": "vonis",
+          "suara": "tally.verdict",
+          "jeda_sebelum_detik": 2,
+          "teks": [
+            "Semua pilihan terbaik sudah dicoba, tapi tidak ada satu pun yang bisa membawa Si Ones ke bawah batas aman paparan abu vulkanik. Angka terendahnya tetap 7,9 poin.",
+            "Hal ini disebabkan oleh rute perjalanannya yang membuat dia tetap berada di udara terbuka selama empat puluh tujuh menit. Dan selama itu, tidak ada perlengkapan yang bisa benar-benar menghilangkan risikonya."
+          ]
+        },
+        {
+          "bagian": "opsi_keempat",
+          "suara": "tally.wfh",
+          "jeda_di_tengah_detik": 2,
+          "teks": [
+            "Kalau Si Ones bekerja dari rumah dia akan terpapar abu vulkanik hanya sebesar 0,4 poin.",
+            "Dengan opsi itu, Si Ones aman dari paparan abu vulkanik. Tidak hanya Si Ones. Semua pegawai juga demikian."
+          ]
+        }
+      ]
+    },
+    "memo": {
+      "latar": "screen_memo.png",
+      "suara": "memo.close",
+      "narasi": "Memo ini disusun dari pilihanmu sendiri selama game ini. Kamu bisa sampaikan kepada Ketua Timmu, siapa tahu dapat WFH. Hehe.",
+      "isi": [
+        "Ringkasan Poin Paparan Abu Vulkanik kedua rute",
+        "Tiga tindakan mitigasi yang terbukti paling besar pengaruhnya dalam sesi ini",
+        "Satu paragraf usulan pengaturan kerja dari rumah bagi pegawai dengan rantai perjalanan berganda selama sebaran abu berlangsung, dengan catatan bahwa Menteri Dalam Negeri telah menyatakan ASN di daerah terdampak dapat menerapkan WFH bertahap 50%, 75%, hingga 100% berdasarkan penilaian aspek kesehatan dan keamanan, dan bahwa keputusan untuk instansi pusat ada di pimpinan masing-masing"
+      ],
+      "tombol_salin": "Salin hasil",
+      "pemberitahuan_salin": "Hasil disalin",
+      "nada": "Tenang. Yang meyakinkan di sini adalah selisih 7,9 lawan 0,4, bukan kata bahaya."
+    },
+    "gagal": [
+      {
+        "id": "sakit",
+        "syarat": "Poin Paparan Abu Vulkanik salah satu tokoh melewati 70",
+        "latar": "screen_memo.png diredupkan",
+        "suara": "end.sick",
+        "teks": "Dia terpapar sebanyak tujuh puluh poin. Itu angka yang sangat besar. Tiga hari kemudian, dia pun mengalami batuk kering dan mata merah sehingga perlu izin sakit dan pekerjaannya harus digantikan orang lain."
+      },
+      {
+        "id": "telat",
+        "syarat": "absen lewat 07.30",
+        "latar": "screen_memo.png diredupkan",
+        "suara": "end.late",
+        "teks": "Yah terlambat. Sampai di Gadog lewat setengah delapan.",
+        "catatan": "Permainan tetap lanjut ke Layar Hitung. Layar ini sengaja jauh lebih pendek daripada dua lainnya."
+      },
+      {
+        "id": "keduanya",
+        "syarat": "sakit dan telat sekaligus",
+        "latar": "screen_memo.png diredupkan",
+        "suara": "end.both",
+        "teks": "Sudah terlambat, terpapar abu vulkanik dalam jumlah yang banyak pula. Ini semua karena dikejar waktu dan pilihan rutenya memang berisiko."
+      }
+    ],
+    "wfh": {
+      "latar": "screen_wfh.png",
+      "suara": "end.wfh",
+      "lencana": "pagi_nol",
+      "teks": "Hari ini Si Ones tidak ke mana-mana. Jendela tertutup, laptop menyala, tingkat paparan abu vulkanik yang dia terima hari ini cuma nol koma empat poin.",
+      "syarat_terbuka": "pemain menamatkan permainan dua kali ATAU mengumpulkan 10 kartu fakta",
+      "pilihan_tambahan_di_O1": "Buka laptop, ajukan izin bekerja dari rumah, dan kirim rekap angka kemarin ke Ketua Tim",
+      "durasi_detik": 40
+    }
+  },
+  "suara": {
+    "berkas_peta": "vo.json",
+    "hidup_secara_bawaan": true,
+    "volume_bawaan": 0.7,
+    "aturan": [
+      "Setiap kalimat yang diucapkan harus juga ada sebagai teks di layar, kata per kata sama.",
+      "Klip tidak pernah menahan permainan. Tombol Lanjut aktif sejak detik pertama klip diputar.",
+      "Pilihan bisu disimpan di localStorage."
+    ],
+    "peta": {
+      "title.intro": "audio/vo_01_judul.mp3",
+      "brief.cho": "audio/vo_02_cho.mp3",
+      "brief.ones": "audio/vo_03_ones.mp3",
+      "tally.open": "audio/vo_04_hitung_buka.mp3",
+      "tally.numbers": "audio/vo_05_hitung_angka.mp3",
+      "tally.verdict": "audio/vo_06_hitung_vonis.mp3",
+      "tally.wfh": "audio/vo_07_wfh_angka.mp3",
+      "memo.close": "audio/vo_08_memo.mp3",
+      "end.sick": "audio/vo_09_gagal_sakit.mp3",
+      "end.late": "audio/vo_10_gagal_telat.mp3",
+      "end.both": "audio/vo_11_gagal_dua.mp3",
+      "end.wfh": "audio/vo_12_wfh_terkunci.mp3"
+    }
+  },
+  "aset": {
+    "tokoh_cho": [
+      "cho_calm",
+      "cho_jacket",
+      "cho_mask",
+      "cho_mask_tense",
+      "cho_tired"
+    ],
+    "aturan_aset_cho": "Dipilih mesin: cho_jacket kalau c1-info diambil, cho_mask_tense selama C4 dan C6, cho_tired setelah kejadian serempet di C4 dan berlaku sampai akhir, cho_mask saat di dalam mobil dan di parkiran, cho_calm untuk sisanya. cho_tired menang atas cho_mask dan cho_calm, tapi kalah dari cho_mask_tense saat mengemudi.",
+    "tokoh_ones": [
+      "ones_calm",
+      "ones_mask",
+      "ones_cloth_loose",
+      "ones_lensa",
+      "ones_tired"
+    ],
+    "aturan_aset_ones": "Dipilih mesin, bukan ditetapkan per keputusan: ones_mask kalau KN95 dan goggle terpasang, ones_cloth_loose kalau cuma masker kain, ones_lensa kalau lensa kontak dibawa, ones_tired setelah iritasi mata, ones_calm untuk sisanya.",
+    "gaya": "Menyerupai pixel art, bukan pixel art di atas kisi. Partikel abu digambar sebagai titik 1 sampai 2 piksel bertepi tajam.",
+    "palet": {
+      "langit": "#B8AFA0",
+      "abu": "#DCD6CB",
+      "aspal": "#3A3F45",
+      "hijau_gadog": "#4A6B4F",
+      "jingga": "#C4622D",
+      "merah_dosis": "#8E2F2F"
+    }
+  },
+  "antarmuka": {
+    "lebar_minimum_px": 1024,
+    "di_bawah_600px": "Tampilkan satu kalimat yang menyarankan membukanya di laptop. Jangan paksakan tata letak dua panel.",
+    "panel": "Panel yang menunggu giliran diturunkan saturasinya dan diberi buram tipis, tapi tetap terlihat. Jangan pernah menyembunyikan salah satu panel.",
+    "penunjuk_kemajuan": "Keputusan N dari 14, berupa angka bukan batang",
+    "pintasan": {
+      "pilihan": "1 / 2 / 3",
+      "kenapa": "F",
+      "lanjut": "Enter",
+      "bisu": "M",
+      "bantuan": "H",
+      "ulang": "R",
+      "tutup": "Esc",
+      "salin": "C"
+    },
+    "aturan_keras": [
+      "Tidak ada kata benar, salah, bagus, atau seharusnya di mana pun yang dilihat pemain.",
+      "Biaya waktu ditulis di tombol. Biaya Poin Paparan Abu Vulkanik tidak pernah ditulis di tombol.",
+      "Permainan tidak pernah maju sendiri; selalu tunggu pemain menekan Lanjut.",
+      "Batang Poin Paparan Abu Vulkanik tidak pernah menyusut.",
+      "Warna bukan satu-satunya pembawa informasi; angka selalu ditulis di sebelah batang.",
+      "Hormati prefers-reduced-motion.",
+      "Kemajuan disimpan tiap keputusan, dengan tombol Lanjutkan pagi yang tertunda di layar judul."
+    ]
+  },
+  "papan_skor": {
+    "disimpan_di": "localStorage",
+    "metrik": [
+      "Poin Paparan Abu Vulkanik gabungan terendah",
+      "Poin Paparan Abu Vulkanik Si Ones terendah",
+      "waktu absen tercepat tanpa melewati ambang aman"
+    ]
+  }
+}

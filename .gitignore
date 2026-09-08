@@ -1,0 +1,21 @@
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Editor / IDE
+.vscode/
+.idea/
+*.swp
+*~
+
+# Logs & temp
+*.log
+*.tmp
+.cache/
+
+# Server lokal untuk pengembangan (python3 -m http.server)
+__pycache__/
+
+# Lembar acuan, tidak untuk di-deploy
+/ref/
