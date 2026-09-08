@@ -1,0 +1,10 @@
+{
+  "name": "jalur-berabu",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Game edukasi mitigasi abu vulkanik. JavaScript polos, tanpa proses build.",
+  "scripts": {
+    "test": "node test/acuan.mjs"
+  }
+}
