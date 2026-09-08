@@ -1,6 +1,6 @@
 /*
   Jalur Berabu - style.css
-  Lapis 2: TATA LETAK FUNGSIONAL SAJA. Palet, tipografi, partikel abu, dan
+  Lapis 2-3: TATA LETAK FUNGSIONAL SAJA. Palet, tipografi, partikel abu, dan
   vignette menyusul di lapis 4. Tidak ada gambar dirujuk dari sini.
 */
 
@@ -56,6 +56,23 @@ body {
 .catatan-gambar {
   opacity: 0.6;
   font-size: 0.9em;
+}
+
+#hitung-teks p,
+#memo-isi p,
+#memo-isi li {
+  max-width: 62ch;
+}
+
+.kartu {
+  border: 1px solid;
+  padding: 0.5rem 0.75rem;
+  margin: 0.4rem 0;
+  max-width: 72ch;
+}
+
+.kartu.terkunci {
+  opacity: 0.5;
 }
 
 @media (prefers-reduced-motion: reduce) {

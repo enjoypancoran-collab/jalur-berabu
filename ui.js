@@ -1,9 +1,13 @@
 // ui.js
 // Lapis 2: peralihan layar, tombol, pintasan papan ketik, dua panel berdampingan.
+// Lapis 3: Layar Hitung (mengikuti layar.hitung.urutan; angka dihitung ulang
+//          mesin, bukan diambil sebagai teks), kejadian sisipan atap & mata,
+//          sistem 14 kartu fakta + layar koleksi, kartu memo + Salin hasil (C).
 //
 // Semua teks dan angka dibaca dari content.json saat runtime. Perhitungan
-// paparan seluruhnya dilakukan engine.js. Berkas ini hanya menata dan menerima
-// masukan pemain; ia tidak pernah memajukan permainan sendiri.
+// paparan dan penentuan kartu terbuka seluruhnya di engine.js. Berkas ini
+// tidak pernah memajukan permainan sendiri kecuali pada rangkaian terjadwal
+// Layar Hitung, yang jedanya ditetapkan content.
 
 import {
   jalankanRute,
@@ -11,13 +15,19 @@ import {
   urutanKeputusan,
   undiFaktorAngin,
   bulatkanSatuDesimal,
+  kartuFaktaTerbuka,
 } from './engine.js';
+import {
+  kartuTerbukaTersimpan,
+  simpanKartuTerbuka,
+  tambahTamat,
+} from './save.js';
 
 // Satu-satunya dua label tampilan yang tidak ada di content.json: content
 // tidak punya field nama tokoh. Semua string lain bersumber dari content.
 const NAMA = { cho: 'Bro Cho', ones: 'Si Ones' };
 
-const LAYAR = ['judul', 'kartu', 'main', 'tiba'];
+const LAYAR = ['judul', 'kartu', 'main', 'tiba', 'hitung', 'memo', 'koleksi'];
 
 let content;
 let P; // content.antarmuka.pintasan
@@ -25,7 +35,7 @@ let sesi;
 
 const el = (id) => document.getElementById(id);
 const fmt1 = (n) => bulatkanSatuDesimal(n).toFixed(1).replace('.', ',');
-const koma = (n) => String(n).replace('.', ',');
+const koma = (s) => String(s).replace('.', ',');
 const fokus = (node) => {
   if (node) requestAnimationFrame(() => node.focus());
 };
@@ -47,7 +57,6 @@ async function mulai() {
   el('status').hidden = true;
   P = content.antarmuka.pintasan;
 
-  // Aturan antarmuka CLAUDE.md: di bawah 600 piksel, satu kalimat saja.
   if (window.matchMedia && window.matchMedia('(max-width: 599px)').matches) {
     document.body.replaceChildren();
     const p = document.createElement('p');
@@ -61,35 +70,47 @@ async function mulai() {
 
   el('judul').textContent = content.meta.judul;
   el('subjudul').textContent = content.meta.subjudul;
-  // Baris peringatan suara tampil sebelum ada bunyi apa pun (belum ada suara).
   el('peringatan-suara').textContent = content.layar.judul.baris_peringatan_suara;
   el('tombol-mulai').textContent = content.label.tombol.mulai;
   el('tombol-ulang').textContent = content.label.tombol.ulang;
+  el('tombol-koleksi-judul').textContent = content.label.tombol.koleksi;
+  el('tombol-koleksi-memo').textContent = content.label.tombol.koleksi;
   el('nama-cho').textContent = NAMA.cho;
   el('nama-ones').textContent = NAMA.ones;
   el('bantuan-pintasan').textContent = teksPintasan();
 
   el('tombol-mulai').addEventListener('click', () => pergiKe('kartu'));
   el('tombol-kartu').addEventListener('click', lanjutKartu);
+  el('tombol-tiba-lanjut').addEventListener('click', () => pergiKe('hitung'));
+  el('tombol-tiba-lanjut').textContent = content.label.tombol.lanjut;
+  el('hitung-lanjut').addEventListener('click', () => pergiKe('memo'));
+  el('hitung-lanjut').textContent = content.label.tombol.lanjut;
+  el('tombol-salin').addEventListener('click', salinHasil);
   el('tombol-ulang').addEventListener('click', ulang);
   el('tombol-uji').addEventListener('click', () => {
     el('hasil-uji').textContent = ujiAcuan();
   });
-  window.addEventListener('keydown', tekan);
+  el('tombol-koleksi-judul').addEventListener('click', () => bukaKoleksi());
+  el('tombol-koleksi-memo').addEventListener('click', () => bukaKoleksi());
+  el('tombol-koleksi-kembali').addEventListener('click', () =>
+    pergiKe(sesi.layarSebelum || 'judul'),
+  );
 
+  window.addEventListener('keydown', tekan);
   pergiKe('judul');
 }
 
 function resetSesi() {
   sesi = {
     layar: 'judul',
+    layarSebelum: null,
     angin: undiFaktorAngin(content).nilai,
-    // Lapis 2 menyamakan asumsi masker dengan angka acuan. Lapisan berikutnya
+    // Lapis 2-3 menyamakan asumsi masker dengan angka acuan. Lapisan berikutnya
     // menurunkannya dari barang yang dibawa Si Ones di O2.
     maskerId: 'kn95_rapat',
     urutan: urutanKeputusan(content),
     langkah: 0,
-    fase: 'pilih', // 'pilih' | 'akibat'
+    fase: 'pilih', // 'pilih' | 'akibat' | 'sisipan-pilih' | 'sisipan-akibat'
     kartuIdx: 0,
     pilihanCho: [],
     pilihanOnes: [],
@@ -97,18 +118,42 @@ function resetSesi() {
     serempet: false,
     pilihanTerakhir: null,
     tombolPilihan: [],
+    tombolLanjut: null,
+    sisipanAktif: null,
+    sisipanSelesai: [],
+    sisipanTerakhir: null,
+    pilihanMata: null,
+    pilihanAtap: null,
+    sampaiHitung: false,
+    tamatDicatat: false,
+    hitung: { antrean: [], idx: 0, selesai: false, timer: null },
+    kartuTerbuka: new Set(),
   };
 }
 
 // --- peralihan layar --------------------------------------------------------
 
 function pergiKe(nama) {
+  if (nama !== 'hitung' && sesi.hitung.timer) {
+    clearTimeout(sesi.hitung.timer);
+    sesi.hitung.timer = null;
+  }
   for (const l of LAYAR) el('layar-' + l).hidden = l !== nama;
+  if (nama !== 'koleksi') sesi.layarSebelum = sesi.layar;
   sesi.layar = nama;
+
   if (nama === 'judul') fokus(el('tombol-mulai'));
   else if (nama === 'kartu') renderKartu();
   else if (nama === 'main') renderMain();
   else if (nama === 'tiba') renderTiba();
+  else if (nama === 'hitung') mulaiHitung();
+  else if (nama === 'memo') renderMemo();
+  else if (nama === 'koleksi') renderKoleksi();
+}
+
+function bukaKoleksi() {
+  sesi.layarSebelum = sesi.layar;
+  pergiKe('koleksi');
 }
 
 // --- kartu pembuka ---------------------------------------------------------
@@ -120,7 +165,6 @@ function renderKartu() {
     'Kartu ' + (sesi.kartuIdx + 1) + ' dari ' + kartu.length;
   el('kartu-teks').textContent = k.teks;
   el('kartu-gambar').textContent = k.gambar ? '[gambar: ' + k.gambar + ']' : '';
-  // Kartu ketiga membawa tombol "Mulai pagi"; selebihnya "Lanjut".
   el('tombol-kartu').textContent = k.tombol || content.label.tombol.lanjut;
   fokus(el('tombol-kartu'));
 }
@@ -141,15 +185,24 @@ function cfg() {
   return { faktorAngin: sesi.angin, faktorMaskerId: sesi.maskerId };
 }
 
-function totalSekarang() {
-  return {
-    cho: jalankanRute(content, cfg(), 'cho', sesi.pilihanCho, {
-      serempet: sesi.serempet,
-    }),
-    ones: jalankanRute(content, cfg(), 'ones', sesi.pilihanOnes, {
-      barang: sesi.barang,
-    }),
-  };
+function opsiOnes() {
+  const o = { barang: sesi.barang };
+  if (sesi.pilihanMata) {
+    o.pilihanKejadian = { mata: sesi.pilihanMata };
+  } else if (sesi.sisipanAktif && sesi.sisipanAktif.id === 'mata') {
+    // kejadian mata sedang berjalan tapi belum dipilih: jangan diprediksi di HUD
+    o.abaikanKejadian = ['mata'];
+  }
+  return o;
+}
+
+function hasilCho() {
+  return jalankanRute(content, cfg(), 'cho', sesi.pilihanCho, {
+    serempet: sesi.serempet,
+  });
+}
+function hasilOnes() {
+  return jalankanRute(content, cfg(), 'ones', sesi.pilihanOnes, opsiOnes());
 }
 
 function batang(pp) {
@@ -159,25 +212,40 @@ function batang(pp) {
 }
 
 function renderHud(targetId) {
-  const t = totalSekarang();
-  // Label penuh sekali di atas kedua batang; angka selalu di sebelah batang.
+  const c = hasilCho().paparan;
+  const o = hasilOnes().paparan;
   el(targetId).textContent = [
     content.label.paparan_penuh,
-    '  ' + NAMA.cho.padEnd(9) + batang(t.cho.paparan) + '  ' + fmt1(t.cho.paparan) + ' poin',
-    '  ' + NAMA.ones.padEnd(9) + batang(t.ones.paparan) + '  ' + fmt1(t.ones.paparan) + ' poin',
+    '  ' + NAMA.cho.padEnd(9) + batang(c) + '  ' + fmt1(c) + ' poin',
+    '  ' + NAMA.ones.padEnd(9) + batang(o) + '  ' + fmt1(o) + ' poin',
   ].join('\n');
 }
 
+function bukaKartu() {
+  const set = kartuFaktaTerbuka(content, {
+    pilihanCho: sesi.pilihanCho,
+    pilihanOnes: sesi.pilihanOnes,
+    barang: sesi.barang,
+    sisipanSelesai: sesi.sisipanSelesai,
+    sampaiHitung: sesi.sampaiHitung,
+  });
+  sesi.kartuTerbuka = set;
+  simpanKartuTerbuka([...set]);
+}
+
 function renderMain() {
-  const total = sesi.urutan.length; // 14
-  if (sesi.langkah >= total) {
+  if (sesi.fase === 'sisipan-pilih' || sesi.fase === 'sisipan-akibat') {
+    renderSisipan();
+    return;
+  }
+  if (sesi.langkah >= sesi.urutan.length) {
     pergiKe('tiba');
     return;
   }
 
   const k = sesi.urutan[sesi.langkah];
-  // Penunjuk kemajuan: angka, bukan batang.
-  el('kemajuan').textContent = 'Keputusan ' + (sesi.langkah + 1) + ' dari ' + total;
+  el('kemajuan').textContent =
+    'Keputusan ' + (sesi.langkah + 1) + ' dari ' + sesi.urutan.length;
   renderHud('hud');
 
   const aktifCho = k.tokoh === 'cho';
@@ -193,8 +261,6 @@ function renderMain() {
     renderAkibat(k, isiAktif);
   }
 
-  // Panel yang menunggu: kalau belum pernah diisi, beri penanda; kalau sudah,
-  // biarkan isinya (akibat terakhirnya) tetap terlihat, hanya diredupkan.
   const isiLain = el(aktifCho ? 'isi-ones' : 'isi-cho');
   if (!isiLain.dataset.terisi) {
     isiLain.textContent =
@@ -259,7 +325,6 @@ function renderBarang(k, isi) {
         dipilih.delete(it.id);
       }
       lanjut.disabled = dipilih.size !== k.slot;
-      // Begitu genap, arahkan fokus ke Lanjut supaya bisa lewat papan ketik saja.
       if (!lanjut.disabled) fokus(lanjut);
     });
     baris.append(cb, document.createTextNode(' ' + (i + 1) + '. ' + it.nama));
@@ -271,6 +336,7 @@ function renderBarang(k, isi) {
     sesi.barang = [...dipilih];
     sesi.pilihanTerakhir = null; // O2 memakai kalimat_akibat milik keputusan
     sesi.fase = 'akibat';
+    bukaKartu();
     renderMain();
   });
   isi.append(lanjut);
@@ -288,6 +354,7 @@ function pilih(k, p) {
   }
   sesi.pilihanTerakhir = p;
   sesi.fase = 'akibat';
+  bukaKartu();
   renderMain();
 }
 
@@ -320,33 +387,451 @@ function lanjutMain() {
   sesi.langkah += 1;
   sesi.fase = 'pilih';
   sesi.pilihanTerakhir = null;
+  if (cekSisipan()) return;
+  renderMain();
+}
+
+// --- kejadian sisipan (atap, mata) ---------------------------------------
+
+function cekSisipan() {
+  // atap: selalu, setelah C4 (empat pilihan Cho sudah masuk).
+  if (!sesi.sisipanSelesai.includes('atap') && sesi.pilihanCho.length >= 4) {
+    return mulaiSisipan('atap');
+  }
+  // mata: setelah O3, kalau goggle tidak dibawa atau lensa kontak dibawa.
+  const mataTerpicu =
+    !sesi.barang.includes('goggle') || sesi.barang.includes('lensa_kontak');
+  if (
+    !sesi.sisipanSelesai.includes('mata') &&
+    mataTerpicu &&
+    sesi.pilihanOnes.length >= 2
+  ) {
+    return mulaiSisipan('mata');
+  }
+  return false;
+}
+
+function mulaiSisipan(id) {
+  sesi.sisipanAktif = content.kejadian_sisipan.find((e) => e.id === id);
+  sesi.sisipanTerakhir = null;
+  sesi.fase = 'sisipan-pilih';
+  renderSisipan();
+  return true;
+}
+
+function cocokSyarat(syarat) {
+  for (const it of content.barang) {
+    if (syarat.includes(it.id)) return sesi.barang.includes(it.id);
+  }
+  return true;
+}
+
+function renderSisipan() {
+  const ev = sesi.sisipanAktif;
+  el('kemajuan').textContent = 'Kejadian';
+  renderHud('hud');
+
+  const aktifCho = ev.tokoh === 'cho';
+  el('panel-cho').classList.toggle('redup', !aktifCho);
+  el('panel-ones').classList.toggle('redup', aktifCho);
+  el('kenapa-catatan').hidden = true;
+
+  const isi = el(aktifCho ? 'isi-cho' : 'isi-ones');
+  isi.replaceChildren();
+  isi.dataset.terisi = '1';
+
+  const h = document.createElement('p');
+  h.textContent = ev.judul;
+  isi.append(h);
+
+  if (sesi.fase === 'sisipan-pilih') {
+    if (
+      sesi.barang.includes('lensa_kontak') &&
+      ev.kalimat_tambahan_jika_lensa_kontak
+    ) {
+      const t = document.createElement('p');
+      t.textContent = ev.kalimat_tambahan_jika_lensa_kontak;
+      isi.append(t);
+    }
+    sesi.tombolPilihan = [];
+    const opsi = ev.pilihan.filter((p) => !p.syarat || cocokSyarat(p.syarat));
+    opsi.forEach((p, i) => {
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.textContent = (i + 1) + '. ' + p.label;
+      b.addEventListener('click', () => pilihSisipan(ev, p));
+      isi.append(b);
+      sesi.tombolPilihan.push(b);
+    });
+    fokus(sesi.tombolPilihan[0]);
+  } else {
+    const p = sesi.sisipanTerakhir;
+    const a = document.createElement('p');
+    a.textContent = (p && p.kalimat_akibat) || ev.kalimat_akibat || '';
+    isi.append(a);
+
+    const lanjut = document.createElement('button');
+    lanjut.type = 'button';
+    lanjut.textContent = content.label.tombol.lanjut;
+    lanjut.addEventListener('click', lanjutSisipan);
+    isi.append(lanjut);
+    fokus(lanjut);
+  }
+}
+
+function pilihSisipan(ev, p) {
+  if (sesi.fase !== 'sisipan-pilih') return;
+  if (ev.id === 'mata') sesi.pilihanMata = p.id;
+  if (ev.id === 'atap') sesi.pilihanAtap = p.id;
+  sesi.sisipanTerakhir = p;
+  sesi.fase = 'sisipan-akibat';
+  renderSisipan();
+}
+
+function lanjutSisipan() {
+  if (sesi.fase !== 'sisipan-akibat') return;
+  const ev = sesi.sisipanAktif;
+  if (!sesi.sisipanSelesai.includes(ev.id)) sesi.sisipanSelesai.push(ev.id);
+  sesi.sisipanAktif = null;
+  sesi.sisipanTerakhir = null;
+  sesi.fase = 'pilih';
+  bukaKartu();
+  if (cekSisipan()) return;
   renderMain();
 }
 
 // --- layar tiba --------------------------------------------------------
 
 function renderTiba() {
-  el('tiba-teks').textContent = NAMA.cho + ' dan ' + NAMA.ones + ' sampai di Gadog.';
+  el('tiba-teks').textContent =
+    NAMA.cho + ' dan ' + NAMA.ones + ' sampai di Gadog.';
   renderHud('hud-tiba');
-  fokus(el('tombol-ulang'));
+  fokus(el('tombol-tiba-lanjut'));
 }
+
+// --- Layar Hitung -----------------------------------------------------
+
+// Angka acuan dihitung ULANG oleh mesin pada kondisi kanonik (faktor angin 1,0,
+// masker KN95 rapat), tidak diambil sebagai teks dari content.json.
+function hitungAngkaHitung() {
+  const c = { faktorAngin: 1, faktorMaskerId: 'kn95_rapat' };
+  const a = content.angka_acuan;
+  const cho = jalankanRute(content, c, 'cho', a.rute_optimal_cho, {});
+  const ones = jalankanRute(content, c, 'ones', a.rute_optimal_ones, {
+    barang: a.barang_optimal_ones,
+  });
+  const wfh = hitungWfh(content);
+  return {
+    cho: cho.paparan,
+    ones: ones.paparan,
+    menit: ones.menitUdaraTerbuka,
+    wfh: wfh.paparan,
+    ambang: content.konstanta.ambang_aman,
+  };
+}
+
+// Indonesia, cukup untuk 0..999 (mis. "empat puluh tujuh").
+function angkaKeKata(n) {
+  n = Math.round(n);
+  const s = [
+    'nol', 'satu', 'dua', 'tiga', 'empat', 'lima', 'enam', 'tujuh', 'delapan',
+    'sembilan', 'sepuluh', 'sebelas',
+  ];
+  if (n < 12) return s[n];
+  if (n < 20) return s[n - 10] + ' belas';
+  if (n < 100) {
+    const p = Math.floor(n / 10);
+    const r = n % 10;
+    return s[p] + ' puluh' + (r ? ' ' + s[r] : '');
+  }
+  if (n < 200) return 'seratus' + (n % 100 ? ' ' + angkaKeKata(n % 100) : '');
+  if (n < 1000) {
+    const p = Math.floor(n / 100);
+    const r = n % 100;
+    return s[p] + ' ratus' + (r ? ' ' + angkaKeKata(r) : '');
+  }
+  return String(n);
+}
+
+// Pasangan {cari, ganti}: kunci pencarian diturunkan dari content.angka_acuan
+// (bukan ditulis di kode), nilai pengganti dari hasil hitung mesin.
+function pasanganAngka(h) {
+  const a = content.angka_acuan;
+  const f = (x) => fmt1(x);
+  return [
+    { cari: f(a.cho_optimal), ganti: f(h.cho) },
+    { cari: f(a.ones_optimal), ganti: f(h.ones) },
+    { cari: f(a.rute_wfh), ganti: f(h.wfh) },
+    { cari: koma(String(a.ambang_aman)), ganti: koma(String(bulatkanSatuDesimal(h.ambang))) },
+    { cari: angkaKeKata(a.ones_menit_udara_terbuka), ganti: String(h.menit) },
+  ];
+}
+
+function terapkanAngka(teks, pasangan) {
+  let out = teks;
+  for (const { cari, ganti } of pasangan) {
+    if (!cari) continue;
+    if (/[a-z]/i.test(cari)) {
+      out = out.split(cari).join(ganti); // frasa kata -> digit
+    } else {
+      const esc = cari.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      out = out.replace(new RegExp('(?<![\\d,])' + esc + '(?![\\d,])', 'g'), ganti);
+    }
+  }
+  return out;
+}
+
+function mulaiHitung() {
+  sesi.sampaiHitung = true;
+  bukaKartu(); // membuka kartu layar.hitung.kartu_fakta_terbuka
+
+  const psg = pasanganAngka(hitungAngkaHitung());
+  const kurangiGerak =
+    window.matchMedia &&
+    window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const ms = (detik) => (kurangiGerak ? 0 : Math.round((detik || 0) * 1000));
+
+  const antrean = [];
+  for (const bagian of content.layar.hitung.urutan) {
+    const baris = (bagian.teks || []).map((t) => terapkanAngka(t, psg));
+    baris.forEach((teks, i) => {
+      let jeda = 0;
+      if (bagian.bagian === 'tiga_baris_angka' && i > 0) {
+        jeda = ms(bagian.jeda_antarbaris_detik);
+      } else if (bagian.bagian === 'vonis' && i === 0) {
+        jeda = ms(bagian.jeda_sebelum_detik);
+      } else if (bagian.bagian === 'opsi_keempat' && i === 1) {
+        jeda = ms(bagian.jeda_di_tengah_detik);
+      }
+      antrean.push({ teks, jeda });
+    });
+  }
+
+  sesi.hitung = { antrean, idx: 0, selesai: false, timer: null };
+  el('hitung-teks').replaceChildren();
+  // Dua batang Poin Paparan Abu Vulkanik milik pemain tetap terlihat.
+  renderHud('hitung-hud');
+  el('hitung-lanjut').hidden = true;
+  langkahHitung();
+}
+
+function langkahHitung() {
+  const h = sesi.hitung;
+  if (h.idx >= h.antrean.length) {
+    h.selesai = true;
+    el('hitung-lanjut').hidden = false;
+    fokus(el('hitung-lanjut'));
+    return;
+  }
+  const item = h.antrean[h.idx++];
+  h.timer = setTimeout(() => {
+    h.timer = null;
+    const p = document.createElement('p');
+    p.textContent = item.teks;
+    el('hitung-teks').append(p);
+    langkahHitung();
+  }, item.jeda);
+}
+
+function lewatiHitung() {
+  const h = sesi.hitung;
+  if (h.timer) {
+    clearTimeout(h.timer);
+    h.timer = null;
+  }
+  while (h.idx < h.antrean.length) {
+    const p = document.createElement('p');
+    p.textContent = h.antrean[h.idx++].teks;
+    el('hitung-teks').append(p);
+  }
+  h.selesai = true;
+  el('hitung-lanjut').hidden = false;
+  fokus(el('hitung-lanjut'));
+}
+
+// --- kartu memo -------------------------------------------------------
+
+function ringkasanMemo() {
+  const s = { cho: hasilCho(), ones: hasilOnes() };
+  const acu = hitungAngkaHitung();
+  const L = content.label.paparan_penuh;
+  return [
+    L + ' ' + NAMA.cho + ' (rutemu): ' + fmt1(s.cho.paparan) + ' poin',
+    L + ' ' + NAMA.ones + ' (rutemu): ' + fmt1(s.ones.paparan) + ' poin',
+    'Rute paling aman ' + NAMA.cho + ': ' + fmt1(acu.cho) + ' poin',
+    'Rute paling aman ' + NAMA.ones + ': ' + fmt1(acu.ones) + ' poin',
+    'Batas aman: ' + fmt1(acu.ambang) + ' poin',
+    'Rute bekerja dari rumah: ' + fmt1(acu.wfh) + ' poin',
+  ];
+}
+
+function tigaTindakan() {
+  const petaP = new Map();
+  for (const k of content.keputusan) {
+    for (const p of k.pilihan || []) petaP.set(p.id, p);
+  }
+  const kontrib = [];
+  for (const [tokoh, hasil] of [
+    ['cho', hasilCho()],
+    ['ones', hasilOnes()],
+  ]) {
+    for (const it of hasil.rincian) {
+      if (!(it.pp > 0)) continue;
+      let label;
+      if (it.id === 'mengemudi') label = 'Perjalanan mengemudi ' + NAMA.cho;
+      else if (petaP.has(it.id)) label = petaP.get(it.id).label;
+      else label = it.id;
+      kontrib.push({
+        nama: tokoh === 'cho' ? NAMA.cho : NAMA.ones,
+        label,
+        pp: it.pp,
+      });
+    }
+  }
+  kontrib.sort((a, b) => b.pp - a.pp);
+  return kontrib
+    .slice(0, 3)
+    .map((c) => c.nama + ': ' + c.label + ' — ' + fmt1(c.pp) + ' poin');
+}
+
+function teksMemo() {
+  const m = content.layar.memo;
+  return [
+    content.meta.judul + ' — memo',
+    '',
+    m.narasi,
+    '',
+    m.isi[0],
+    ...ringkasanMemo(),
+    '',
+    m.isi[1],
+    ...tigaTindakan().map((t, i) => i + 1 + '. ' + t),
+    '',
+    m.isi[2],
+  ].join('\n');
+}
+
+function renderMemo() {
+  if (!sesi.tamatDicatat) {
+    sesi.tamatDicatat = true;
+    tambahTamat();
+  }
+  const m = content.layar.memo;
+  const box = el('memo-isi');
+  box.replaceChildren();
+
+  const nar = document.createElement('p');
+  nar.textContent = m.narasi;
+  box.append(nar);
+
+  const j1 = document.createElement('h3');
+  j1.textContent = m.isi[0];
+  box.append(j1);
+  const pre = document.createElement('pre');
+  pre.textContent = ringkasanMemo().join('\n');
+  box.append(pre);
+
+  const j2 = document.createElement('h3');
+  j2.textContent = m.isi[1];
+  box.append(j2);
+  const ol = document.createElement('ol');
+  for (const t of tigaTindakan()) {
+    const li = document.createElement('li');
+    li.textContent = t;
+    ol.append(li);
+  }
+  box.append(ol);
+
+  const j3 = document.createElement('h3');
+  j3.textContent = m.isi[2];
+  box.append(j3);
+
+  el('tombol-salin').textContent = m.tombol_salin;
+  el('salin-status').hidden = true;
+  el('salin-status').textContent = '';
+  el('memo-kartu-hitung').textContent =
+    'Kartu fakta terkumpul: ' +
+    kartuTerbukaTersimpan().size +
+    ' dari ' +
+    content.kartu_fakta.length;
+
+  fokus(el('tombol-salin'));
+}
+
+async function salinHasil() {
+  if (sesi.layar !== 'memo') return;
+  const teks = teksMemo();
+  let ok = false;
+  try {
+    await navigator.clipboard.writeText(teks);
+    ok = true;
+  } catch (e) {
+    try {
+      const ta = document.createElement('textarea');
+      ta.value = teks;
+      document.body.append(ta);
+      ta.select();
+      ok = document.execCommand('copy');
+      ta.remove();
+    } catch (e2) {
+      ok = false;
+    }
+  }
+  const s = el('salin-status');
+  s.textContent = ok
+    ? content.layar.memo.pemberitahuan_salin
+    : 'Salin gagal. Pilih teks memo secara manual.';
+  s.hidden = false;
+}
+
+// --- layar koleksi kartu --------------------------------------------
+
+function renderKoleksi() {
+  const terbuka = kartuTerbukaTersimpan();
+  el('koleksi-hitung').textContent =
+    terbuka.size + ' dari ' + content.kartu_fakta.length + ' kartu fakta terkumpul';
+
+  const box = el('koleksi-daftar');
+  box.replaceChildren();
+  for (const kf of content.kartu_fakta) {
+    const div = document.createElement('div');
+    div.className = 'kartu';
+    if (terbuka.has(kf.id)) {
+      const t = document.createElement('p');
+      t.textContent = 'Kartu ' + kf.id + '. ' + kf.teks;
+      const su = document.createElement('p');
+      su.className = 'catatan-gambar';
+      su.textContent = 'Sumber: ' + kf.sumber;
+      div.append(t, su);
+    } else {
+      div.classList.add('terkunci');
+      const t = document.createElement('p');
+      t.textContent = 'Kartu ' + kf.id + '. (belum terbuka)';
+      div.append(t);
+    }
+    box.append(div);
+  }
+  fokus(el('tombol-koleksi-kembali'));
+}
+
+// --- mulai ulang ----------------------------------------------------
 
 function ulang() {
   if (sesi.layar === 'judul') return;
-  const anginBaru = undiFaktorAngin(content).nilai;
+  if (sesi.hitung.timer) clearTimeout(sesi.hitung.timer);
   resetSesi();
-  sesi.angin = anginBaru;
   for (const id of ['isi-cho', 'isi-ones']) {
     el(id).replaceChildren();
     delete el(id).dataset.terisi;
   }
+  el('hitung-teks').replaceChildren();
   el('hasil-uji').textContent = '';
+  el('salin-status').hidden = true;
   pergiKe('judul');
 }
 
 // --- pintasan papan ketik --------------------------------------------------
 
-// Cocokkan tombol yang ditekan dengan nilai dari content.antarmuka.pintasan.
 function cocok(key, spec) {
   const alias = { escape: 'esc', ' ': 'space', spacebar: 'space' };
   const k = key.toLowerCase();
@@ -359,12 +844,12 @@ function cocok(key, spec) {
 
 function teksPintasan() {
   return (
-    'Pintasan: ' +
-    'pilihan ' + P.pilihan + ' | ' +
-    'lanjut ' + P.lanjut + ' | ' +
-    P.kenapa + ' ' + content.label.tombol.kenapa + ' | ' +
-    'ulang ' + P.ulang + ' | ' +
-    'tutup ' + P.tutup
+    'Pintasan: pilihan ' + P.pilihan +
+    ' | lanjut ' + P.lanjut +
+    ' | ' + P.kenapa + ' ' + content.label.tombol.kenapa +
+    ' | ulang ' + P.ulang +
+    ' | ' + P.salin + ' salin (di memo)' +
+    ' | tutup ' + P.tutup
   );
 }
 
@@ -373,49 +858,74 @@ function tekan(ev) {
   const key = ev.key;
   const layar = sesi.layar;
 
-  // Lanjut / maju satu langkah (tidak pernah otomatis).
   if (cocok(key, P.lanjut)) {
     if (layar === 'kartu') {
       ev.preventDefault();
       lanjutKartu();
       return;
     }
-    if (layar === 'main' && sesi.fase === 'akibat') {
-      ev.preventDefault();
-      lanjutMain();
-      return;
-    }
-    // Pemilihan barang O2: kalau sudah genap, Lanjut menutup pemilihan.
-    if (layar === 'main' && sesi.fase === 'pilih') {
-      const k = sesi.urutan[sesi.langkah];
-      if (k.tipe === 'pilih_barang' && sesi.tombolLanjut && !sesi.tombolLanjut.disabled) {
+    if (layar === 'main') {
+      if (sesi.fase === 'akibat') {
         ev.preventDefault();
-        sesi.tombolLanjut.click();
+        lanjutMain();
         return;
+      }
+      if (sesi.fase === 'sisipan-akibat') {
+        ev.preventDefault();
+        lanjutSisipan();
+        return;
+      }
+      if (sesi.fase === 'pilih') {
+        const k = sesi.urutan[sesi.langkah];
+        if (
+          k && k.tipe === 'pilih_barang' &&
+          sesi.tombolLanjut && !sesi.tombolLanjut.disabled
+        ) {
+          ev.preventDefault();
+          sesi.tombolLanjut.click();
+          return;
+        }
       }
     }
     if (layar === 'tiba') {
       ev.preventDefault();
-      ulang();
+      pergiKe('hitung');
+      return;
+    }
+    if (layar === 'hitung') {
+      ev.preventDefault();
+      if (!sesi.hitung.selesai) lewatiHitung();
+      else pergiKe('memo');
       return;
     }
   }
 
-  // Mulai ulang.
   if (cocok(key, P.ulang) && layar !== 'judul') {
     ev.preventDefault();
     ulang();
     return;
   }
 
-  // Tutup: sembunyikan catatan "Kenapa?".
   if (cocok(key, P.tutup)) {
+    if (layar === 'koleksi') {
+      pergiKe(sesi.layarSebelum || 'judul');
+      return;
+    }
     el('kenapa-catatan').hidden = true;
     return;
   }
 
-  // "Kenapa?": tampilkan catatan_mesin keputusan yang sedang berjalan.
-  if (cocok(key, P.kenapa) && layar === 'main') {
+  if (cocok(key, P.salin) && layar === 'memo') {
+    ev.preventDefault();
+    salinHasil();
+    return;
+  }
+
+  if (
+    cocok(key, P.kenapa) &&
+    layar === 'main' &&
+    (sesi.fase === 'pilih' || sesi.fase === 'akibat')
+  ) {
     ev.preventDefault();
     const k = sesi.urutan[sesi.langkah];
     const c = el('kenapa-catatan');
@@ -428,11 +938,14 @@ function tekan(ev) {
     return;
   }
 
-  // Pilihan 1/2/3 (dan 1..9 saat memilih barang).
-  if (layar === 'main' && sesi.fase === 'pilih' && /^[1-9]$/.test(key)) {
-    const k = sesi.urutan[sesi.langkah];
+  if (
+    layar === 'main' &&
+    (sesi.fase === 'pilih' || sesi.fase === 'sisipan-pilih') &&
+    /^[1-9]$/.test(key)
+  ) {
     const n = Number(key) - 1;
-    if (k.tipe === 'pilih_barang') {
+    const k = sesi.urutan[sesi.langkah];
+    if (sesi.fase === 'pilih' && k && k.tipe === 'pilih_barang') {
       const cbs = el('isi-ones').querySelectorAll('input[type=checkbox]');
       if (cbs[n]) cbs[n].click();
       return;
@@ -445,7 +958,7 @@ function tekan(ev) {
     return;
   }
 
-  // P.bisu (M), P.bantuan (H), P.salin (C): menyusul di lapisan berikutnya.
+  // P.bisu (M), P.bantuan (H): menyusul di lapisan berikutnya.
 }
 
 // --- uji angka acuan di browser (alat bantu, bukan bagian alur) ------------

@@ -222,7 +222,8 @@ export function jalankanRute(content, cfg, tokoh, pilihanIds, opsi = {}) {
     );
     const terpicu =
       !barang.includes('goggle') || barang.includes('lensa_kontak');
-    if (mata && adaTitikMuncul && terpicu) {
+    const abaikan = opsi.abaikanKejadian || [];
+    if (mata && adaTitikMuncul && terpicu && !abaikan.includes('mata')) {
       const idDefault = barang.includes('botol_air') ? 'mata-bilas' : 'mata-tahan';
       const idPilih =
         (opsi.pilihanKejadian && opsi.pilihanKejadian.mata) || idDefault;
@@ -252,4 +253,53 @@ export function hitungWfh(content) {
   const faktorMaskerRumah = K.faktor_masker.tanpa_masker; // di rumah tak bermasker
   const paparan = menit * K.laju_ruas.rumah_tertutup * faktorMaskerRumah * 1;
   return { menit, paparan };
+}
+
+/**
+ * Kumpulan id kartu fakta yang terbuka dari keadaan sesi. Semua sumber
+ * ditelusuri dari content, tidak ada id yang ditulis di kode.
+ *
+ * Sumber: kartu_fakta pada pilihan keputusan yang diambil, kartu_fakta_jika_lensa
+ * pada O2, efek.tanpa_kantong_plastik.kartu_fakta di O7, kartu_fakta pada
+ * kejadian sisipan yang sudah dijalani, dan layar.hitung.kartu_fakta_terbuka.
+ *
+ * @param data { pilihanCho, pilihanOnes, barang, sisipanSelesai, sampaiHitung }
+ */
+export function kartuFaktaTerbuka(content, data) {
+  const ids = new Set();
+  const barang = data.barang || [];
+  const diambil = new Set([...(data.pilihanCho || []), ...(data.pilihanOnes || [])]);
+
+  for (const k of content.keputusan) {
+    for (const p of k.pilihan || []) {
+      if (!diambil.has(p.id)) continue;
+      if (p.kartu_fakta) ids.add(p.kartu_fakta);
+      if (
+        p.efek &&
+        p.efek.tanpa_kantong_plastik &&
+        p.efek.tanpa_kantong_plastik.kartu_fakta &&
+        !barang.includes('kantong_plastik')
+      ) {
+        ids.add(p.efek.tanpa_kantong_plastik.kartu_fakta);
+      }
+    }
+    if (k.kartu_fakta_jika_lensa && barang.includes('lensa_kontak')) {
+      ids.add(k.kartu_fakta_jika_lensa);
+    }
+  }
+
+  const sudah = new Set(data.sisipanSelesai || []);
+  for (const ev of content.kejadian_sisipan || []) {
+    if (sudah.has(ev.id) && ev.kartu_fakta) ids.add(ev.kartu_fakta);
+  }
+
+  if (
+    data.sampaiHitung &&
+    content.layar.hitung &&
+    content.layar.hitung.kartu_fakta_terbuka
+  ) {
+    ids.add(content.layar.hitung.kartu_fakta_terbuka);
+  }
+
+  return ids;
 }
