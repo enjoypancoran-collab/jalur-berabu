@@ -8,104 +8,125 @@
 </head>
 <body>
   <!--
-    Lapis 4: lapisan visual. Palet dari content.aset.palet (disuntik ui.js
-    sebagai custom properties), latar per keputusan dari field latar, sprite
-    tokoh, kanvas partikel abu, dan vignette. Gambar yang gagal dimuat diganti
-    kotak berwarna dari palet; layar tidak pernah kosong. Semua path relatif.
-    Perlu server lokal (ES module + fetch):
+    Lapis 4: lapisan visual. Palet dari content.aset.palet (disuntik ui.js).
+    Latar per keputusan dari field latar, sprite tokoh dikomposisikan ke dalam
+    scene (jangkar bawah, bayangan kontak, kabut abu), kanvas partikel abu,
+    grain, dan vignette. Gambar gagal muat -> kotak palet. Path aset relatif.
       node tools/serve.mjs      lalu buka http://localhost:8000/
   -->
   <div id="latar-layar"></div>
 
   <div id="panggung">
-    <p id="status">Memuat content.json&hellip;</p>
+    <p id="status" role="status">Memuat content.json&hellip;</p>
 
     <!-- Layar judul -->
-    <section id="layar-judul" class="layar" hidden>
-      <h1 id="judul"></h1>
-      <p id="subjudul"></p>
-      <p id="peringatan-suara"></p>
-      <button type="button" id="tombol-mulai"></button>
-      <button type="button" id="tombol-koleksi-judul"></button>
-      <p>
-        <button type="button" id="tombol-uji">Uji angka acuan</button>
-      </p>
-      <pre id="hasil-uji"></pre>
+    <section id="layar-judul" class="layar layar--tengah" hidden>
+      <div class="judul-kartu">
+        <p class="kicker" id="peringatan-suara"></p>
+        <h1 id="judul"></h1>
+        <p class="subjudul" id="subjudul"></p>
+        <div class="judul-aksi">
+          <button type="button" id="tombol-mulai" class="btn btn--utama"></button>
+          <button type="button" id="tombol-koleksi-judul" class="btn btn--hantu"></button>
+        </div>
+        <p class="judul-alat">
+          <button type="button" id="tombol-uji" class="btn btn--kecil">Uji angka acuan</button>
+        </p>
+        <pre id="hasil-uji" class="mono"></pre>
+      </div>
     </section>
 
     <!-- Tiga kartu pembuka -->
-    <section id="layar-kartu" class="layar" hidden>
-      <p id="kartu-nomor"></p>
-      <p id="kartu-teks"></p>
-      <p id="kartu-gambar" class="catatan-gambar"></p>
-      <button type="button" id="tombol-kartu"></button>
+    <section id="layar-kartu" class="layar layar--tengah" hidden>
+      <div class="pembuka-kartu">
+        <p class="kicker" id="kartu-nomor"></p>
+        <p class="pembuka-teks" id="kartu-teks"></p>
+        <p class="caption" id="kartu-gambar"></p>
+        <button type="button" id="tombol-kartu" class="btn btn--utama"></button>
+      </div>
     </section>
 
     <!-- Permainan: 14 keputusan bergantian (plus kejadian sisipan) -->
     <section id="layar-main" class="layar" hidden>
-      <p id="kemajuan"></p>
       <div class="hud" id="hud"></div>
+      <p id="kemajuan" aria-live="polite"></p>
       <div class="panel-panel">
         <div class="panel" id="panel-cho">
           <div class="panel-scene" id="scene-cho">
+            <div class="scene-bayangan"></div>
             <div class="sprite-kotak" id="spritebox-cho" hidden></div>
-            <img class="panel-sprite" id="sprite-cho" alt="" hidden>
+            <img class="panel-sprite panel-sprite--kiri" id="sprite-cho" alt="" hidden>
           </div>
-          <h2 id="nama-cho"></h2>
-          <div class="panel-isi" id="isi-cho"></div>
+          <div class="panel-konsol">
+            <h2 id="nama-cho"></h2>
+            <div class="panel-isi" id="isi-cho"></div>
+          </div>
         </div>
         <div class="panel" id="panel-ones">
           <div class="panel-scene" id="scene-ones">
+            <div class="scene-bayangan"></div>
             <div class="sprite-kotak" id="spritebox-ones" hidden></div>
-            <img class="panel-sprite" id="sprite-ones" alt="" hidden>
+            <img class="panel-sprite panel-sprite--kanan" id="sprite-ones" alt="" hidden>
           </div>
-          <h2 id="nama-ones"></h2>
-          <div class="panel-isi" id="isi-ones"></div>
+          <div class="panel-konsol">
+            <h2 id="nama-ones"></h2>
+            <div class="panel-isi" id="isi-ones"></div>
+          </div>
         </div>
       </div>
       <p id="kenapa-catatan" hidden></p>
-      <p id="bantuan-pintasan" class="catatan-gambar"></p>
+      <p id="bantuan-pintasan" class="caption"></p>
     </section>
 
     <!-- Layar tiba -->
-    <section id="layar-tiba" class="layar" hidden>
-      <h2>Tiba</h2>
-      <p id="tiba-teks"></p>
-      <div class="hud" id="hud-tiba"></div>
-      <button type="button" id="tombol-tiba-lanjut"></button>
+    <section id="layar-tiba" class="layar layar--tengah" hidden>
+      <div class="tiba-kartu">
+        <h2>Tiba</h2>
+        <p id="tiba-teks"></p>
+        <div class="hud" id="hud-tiba"></div>
+        <button type="button" id="tombol-tiba-lanjut" class="btn btn--utama"></button>
+      </div>
     </section>
 
     <!-- Layar Hitung -->
-    <section id="layar-hitung" class="layar" hidden>
-      <div class="hud" id="hitung-hud"></div>
-      <div id="hitung-teks"></div>
-      <button type="button" id="hitung-lanjut" hidden></button>
+    <section id="layar-hitung" class="layar layar--tengah" hidden>
+      <div class="hitung-kartu">
+        <div class="hud" id="hitung-hud"></div>
+        <div id="hitung-teks"></div>
+        <button type="button" id="hitung-lanjut" class="btn btn--utama" hidden></button>
+      </div>
     </section>
 
     <!-- Kartu memo -->
-    <section id="layar-memo" class="layar" hidden>
-      <h2>Memo</h2>
-      <div id="memo-isi"></div>
-      <p id="memo-kartu-hitung"></p>
-      <button type="button" id="tombol-salin"></button>
-      <span id="salin-status" hidden></span>
-      <p>
-        <button type="button" id="tombol-koleksi-memo"></button>
-        <button type="button" id="tombol-ulang"></button>
-      </p>
+    <section id="layar-memo" class="layar layar--tengah" hidden>
+      <div class="memo-kertas">
+        <h2>Memo</h2>
+        <div id="memo-isi"></div>
+        <p id="memo-kartu-hitung" class="caption"></p>
+        <div class="memo-aksi">
+          <button type="button" id="tombol-salin" class="btn btn--utama"></button>
+          <button type="button" id="tombol-koleksi-memo" class="btn btn--hantu"></button>
+          <button type="button" id="tombol-ulang" class="btn btn--hantu"></button>
+        </div>
+      </div>
     </section>
 
     <!-- Layar koleksi kartu -->
-    <section id="layar-koleksi" class="layar" hidden>
-      <h2>Koleksi kartu fakta</h2>
-      <p id="koleksi-hitung"></p>
-      <div id="koleksi-daftar"></div>
-      <button type="button" id="tombol-koleksi-kembali">Kembali</button>
+    <section id="layar-koleksi" class="layar layar--tengah" hidden>
+      <div class="koleksi-kartu">
+        <h2>Koleksi kartu fakta</h2>
+        <p id="koleksi-hitung" class="kicker"></p>
+        <div class="koleksi-bar"><span id="koleksi-bar-isi"></span></div>
+        <div id="koleksi-daftar"></div>
+        <button type="button" id="tombol-koleksi-kembali" class="btn btn--hantu">Kembali</button>
+      </div>
     </section>
   </div>
 
   <div id="vignette"></div>
+  <div id="grain"></div>
   <canvas id="abu"></canvas>
+  <div id="salin-status" role="status" hidden></div>
 
   <script type="module" src="ui.js"></script>
 </body>

@@ -39,7 +39,14 @@ const el = (id) => document.getElementById(id);
 const fmt1 = (n) => bulatkanSatuDesimal(n).toFixed(1).replace('.', ',');
 const koma = (s) => String(s).replace('.', ',');
 const fokus = (node) => {
-  if (node) requestAnimationFrame(() => node.focus());
+  if (!node) return;
+  requestAnimationFrame(() => {
+    try {
+      node.focus({ preventScroll: true });
+    } catch (e) {
+      node.focus();
+    }
+  });
 };
 
 // --- muat ---------------------------------------------------------------------
@@ -177,7 +184,8 @@ function mulaiAbu() {
   sesi._abuMulai = true;
 
   const ctx = cv.getContext('2d');
-  const warna = bacaVar('--aspal', '#3a3f45');
+  const warnaGelap = bacaVar('--aspal', '#3a3f45');
+  const warnaTerang = bacaVar('--abu', '#dcd6cb');
   let W = 0;
   let H = 0;
   let titik = [];
@@ -187,25 +195,30 @@ function mulaiAbu() {
     H = cv.height = window.innerHeight || 768;
   };
   const isiUlang = () => {
-    const n = Math.max(40, Math.round((W * H) / 16000));
+    const n = Math.max(70, Math.round((W * H) / 11000));
     titik = [];
     for (let i = 0; i < n; i += 1) {
+      const dekat = Math.random() < 0.6; // lapisan dekat vs jauh (paralaks)
       titik.push({
         x: Math.random() * W,
         y: Math.random() * H,
-        s: Math.random() < 0.5 ? 1 : 2,
-        vy: 10 + Math.random() * 26,
-        vx: -8 + Math.random() * 16,
-        a: 0.12 + Math.random() * 0.33,
+        s: dekat && Math.random() < 0.5 ? 2 : 1,
+        vy: (dekat ? 18 : 7) + Math.random() * (dekat ? 30 : 12),
+        goyang: (dekat ? 9 : 4) + Math.random() * 7,
+        fase: Math.random() * Math.PI * 2,
+        a: (dekat ? 0.16 : 0.07) + Math.random() * 0.24,
+        pucat: Math.random() < 0.35, // sebagian abu berwarna pucat
       });
     }
   };
-  const gambar = () => {
+  const gambar = (t) => {
     ctx.clearRect(0, 0, W, H);
-    ctx.fillStyle = warna;
     for (const p of titik) {
       ctx.globalAlpha = p.a;
-      ctx.fillRect(Math.round(p.x), Math.round(p.y), p.s, p.s);
+      ctx.fillStyle = p.pucat ? warnaTerang : warnaGelap;
+      const x = p.x + Math.sin(t / 1500 + p.fase) * p.goyang;
+      // fillRect + koordinat bulat = titik bertepi tajam
+      ctx.fillRect(Math.round(x), Math.round(p.y), p.s, p.s);
     }
     ctx.globalAlpha = 1;
   };
@@ -215,11 +228,11 @@ function mulaiAbu() {
   window.addEventListener('resize', () => {
     ukur();
     isiUlang();
-    if (prefersReducedMotion()) gambar();
+    if (prefersReducedMotion()) gambar(0);
   });
 
   if (prefersReducedMotion()) {
-    gambar();
+    gambar(0); // satu bingkai statis, tanpa loop
     return;
   }
 
@@ -230,15 +243,12 @@ function mulaiAbu() {
     last = now;
     for (const p of titik) {
       p.y += p.vy * dt;
-      p.x += p.vx * dt;
       if (p.y > H + 2) {
         p.y = -2;
         p.x = Math.random() * W;
       }
-      if (p.x > W + 2) p.x -= W + 4;
-      if (p.x < -2) p.x += W + 4;
     }
-    gambar();
+    gambar(now);
     requestAnimationFrame(tick);
   };
   requestAnimationFrame(tick);
@@ -301,6 +311,14 @@ function pergiKe(nama) {
   }[nama];
   setLatarLayar(latarLayar || '');
 
+  const aktif = el('layar-' + nama);
+  if (aktif) {
+    aktif.classList.remove('layar-masuk');
+    void aktif.offsetWidth; // paksa reflow supaya animasi terpicu ulang
+    aktif.classList.add('layar-masuk');
+  }
+  if (typeof window.scrollTo === 'function') window.scrollTo(0, 0);
+
   if (nama === 'judul') fokus(el('tombol-mulai'));
   else if (nama === 'kartu') renderKartu();
   else if (nama === 'main') renderMain();
@@ -323,7 +341,7 @@ function renderKartu() {
   el('kartu-nomor').textContent =
     'Kartu ' + (sesi.kartuIdx + 1) + ' dari ' + kartu.length;
   el('kartu-teks').textContent = k.teks;
-  el('kartu-gambar').textContent = k.gambar ? '[gambar: ' + k.gambar + ']' : '';
+  el('kartu-gambar').textContent = k.gambar || '';
   el('tombol-kartu').textContent = k.tombol || content.label.tombol.lanjut;
   fokus(el('tombol-kartu'));
 }
@@ -447,8 +465,12 @@ function renderMain() {
   renderHud('hud');
 
   const aktifCho = k.tokoh === 'cho';
-  el('panel-cho').classList.toggle('redup', !aktifCho);
-  el('panel-ones').classList.toggle('redup', aktifCho);
+  const choPra = !el('isi-cho').dataset.terisi && !aktifCho;
+  const onesPra = !el('isi-ones').dataset.terisi && aktifCho;
+  el('panel-cho').classList.toggle('pra', choPra);
+  el('panel-ones').classList.toggle('pra', onesPra);
+  el('panel-cho').classList.toggle('redup', !aktifCho && !choPra);
+  el('panel-ones').classList.toggle('redup', aktifCho && !onesPra);
   el('kenapa-catatan').hidden = true;
 
   // Latar keputusan dari field latar; sprite tokoh sesuai aturan aset.
@@ -475,6 +497,28 @@ function renderMain() {
   }
 }
 
+// Tombol pilihan: chip nomor, label, dan (untuk keputusan biasa) biaya menit.
+// Biaya waktu ditulis di tombol; biaya Poin Paparan Abu Vulkanik TIDAK PERNAH.
+function tombolPilih(nomor, label, menit) {
+  const b = document.createElement('button');
+  b.type = 'button';
+  b.className = 'pilih';
+  const chip = document.createElement('span');
+  chip.className = 'chip';
+  chip.textContent = String(nomor);
+  const lab = document.createElement('span');
+  lab.className = 'pilih-label';
+  lab.textContent = label;
+  b.append(chip, lab);
+  if (menit !== null && menit !== undefined) {
+    const m = document.createElement('span');
+    m.className = 'pilih-menit';
+    m.textContent = '+' + menit + ' menit';
+    b.append(m);
+  }
+  return b;
+}
+
 function renderPilihan(k, isi) {
   isi.replaceChildren();
   isi.dataset.terisi = '1';
@@ -485,11 +529,7 @@ function renderPilihan(k, isi) {
   isi.append(sit);
 
   k.pilihan.forEach((p, i) => {
-    const b = document.createElement('button');
-    b.type = 'button';
-    // Biaya waktu di tombol. Biaya Poin Paparan Abu Vulkanik TIDAK di tombol.
-    b.textContent =
-      (i + 1) + '. ' + p.label + '  (+' + (p.biaya_menit || 0) + ' menit)';
+    const b = tombolPilih(i + 1, p.label, p.biaya_menit || 0);
     b.addEventListener('click', () => pilih(k, p));
     isi.append(b);
     sesi.tombolPilihan.push(b);
@@ -682,9 +722,7 @@ function renderSisipan() {
     sesi.tombolPilihan = [];
     const opsi = ev.pilihan.filter((p) => !p.syarat || cocokSyarat(p.syarat));
     opsi.forEach((p, i) => {
-      const b = document.createElement('button');
-      b.type = 'button';
-      b.textContent = (i + 1) + '. ' + p.label;
+      const b = tombolPilih(i + 1, p.label, null); // kejadian sisipan tanpa biaya menit
       b.addEventListener('click', () => pilihSisipan(ev, p));
       isi.append(b);
       sesi.tombolPilihan.push(b);
@@ -854,11 +892,16 @@ function langkahHitung() {
   const item = h.antrean[h.idx++];
   h.timer = setTimeout(() => {
     h.timer = null;
-    const p = document.createElement('p');
-    p.textContent = item.teks;
-    el('hitung-teks').append(p);
+    tambahBarisHitung(item.teks);
     langkahHitung();
   }, item.jeda);
+}
+
+function tambahBarisHitung(teks) {
+  const p = document.createElement('p');
+  p.className = 'hitung-baris';
+  p.textContent = teks;
+  el('hitung-teks').append(p);
 }
 
 function lewatiHitung() {
@@ -868,9 +911,7 @@ function lewatiHitung() {
     h.timer = null;
   }
   while (h.idx < h.antrean.length) {
-    const p = document.createElement('p');
-    p.textContent = h.antrean[h.idx++].teks;
-    el('hitung-teks').append(p);
+    tambahBarisHitung(h.antrean[h.idx++].teks);
   }
   h.selesai = true;
   el('hitung-lanjut').hidden = false;
@@ -879,17 +920,19 @@ function lewatiHitung() {
 
 // --- kartu memo -------------------------------------------------------
 
+// Pasangan [label, nilai] untuk ringkasan memo.
 function ringkasanMemo() {
-  const s = { cho: hasilCho(), ones: hasilOnes() };
+  const c = hasilCho().paparan;
+  const o = hasilOnes().paparan;
   const acu = hitungAngkaHitung();
   const L = content.label.paparan_penuh;
   return [
-    L + ' ' + NAMA.cho + ' (rutemu): ' + fmt1(s.cho.paparan) + ' poin',
-    L + ' ' + NAMA.ones + ' (rutemu): ' + fmt1(s.ones.paparan) + ' poin',
-    'Rute paling aman ' + NAMA.cho + ': ' + fmt1(acu.cho) + ' poin',
-    'Rute paling aman ' + NAMA.ones + ': ' + fmt1(acu.ones) + ' poin',
-    'Batas aman: ' + fmt1(acu.ambang) + ' poin',
-    'Rute bekerja dari rumah: ' + fmt1(acu.wfh) + ' poin',
+    [L + ' ' + NAMA.cho + ' (rutemu)', fmt1(c) + ' poin'],
+    [L + ' ' + NAMA.ones + ' (rutemu)', fmt1(o) + ' poin'],
+    ['Rute paling aman ' + NAMA.cho, fmt1(acu.cho) + ' poin'],
+    ['Rute paling aman ' + NAMA.ones, fmt1(acu.ones) + ' poin'],
+    ['Batas aman', fmt1(acu.ambang) + ' poin'],
+    ['Rute bekerja dari rumah', fmt1(acu.wfh) + ' poin'],
   ];
 }
 
@@ -930,7 +973,7 @@ function teksMemo() {
     m.narasi,
     '',
     m.isi[0],
-    ...ringkasanMemo(),
+    ...ringkasanMemo().map(([k, v]) => '- ' + k + ': ' + v),
     '',
     m.isi[1],
     ...tigaTindakan().map((t, i) => i + 1 + '. ' + t),
@@ -955,9 +998,18 @@ function renderMemo() {
   const j1 = document.createElement('h3');
   j1.textContent = m.isi[0];
   box.append(j1);
-  const pre = document.createElement('pre');
-  pre.textContent = ringkasanMemo().join('\n');
-  box.append(pre);
+  const dl = document.createElement('dl');
+  dl.className = 'ringkas';
+  for (const [k, v] of ringkasanMemo()) {
+    const row = document.createElement('div');
+    const dt = document.createElement('dt');
+    dt.textContent = k;
+    const dd = document.createElement('dd');
+    dd.textContent = v;
+    row.append(dt, dd);
+    dl.append(row);
+  }
+  box.append(dl);
 
   const j2 = document.createElement('h3');
   j2.textContent = m.isi[1];
@@ -971,8 +1023,11 @@ function renderMemo() {
   box.append(ol);
 
   const j3 = document.createElement('h3');
-  j3.textContent = m.isi[2];
+  j3.textContent = 'Usulan';
   box.append(j3);
+  const par = document.createElement('p');
+  par.textContent = m.isi[2];
+  box.append(par);
 
   el('tombol-salin').textContent = m.tombol_salin;
   el('salin-status').hidden = true;
@@ -1010,14 +1065,23 @@ async function salinHasil() {
     ? content.layar.memo.pemberitahuan_salin
     : 'Salin gagal. Pilih teks memo secara manual.';
   s.hidden = false;
+  clearTimeout(sesi._toastTimer);
+  sesi._toastTimer = setTimeout(() => {
+    s.hidden = true;
+  }, 2600);
 }
 
 // --- layar koleksi kartu --------------------------------------------
 
 function renderKoleksi() {
   const terbuka = kartuTerbukaTersimpan();
+  const total = content.kartu_fakta.length;
   el('koleksi-hitung').textContent =
-    terbuka.size + ' dari ' + content.kartu_fakta.length + ' kartu fakta terkumpul';
+    terbuka.size + ' dari ' + total + ' kartu fakta terkumpul';
+  const bar = el('koleksi-bar-isi');
+  if (bar && bar.style) {
+    bar.style.width = ((terbuka.size / total) * 100).toFixed(1) + '%';
+  }
 
   const box = el('koleksi-daftar');
   box.replaceChildren();
