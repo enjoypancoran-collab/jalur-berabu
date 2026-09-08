@@ -1416,5 +1416,38 @@
       "Poin Paparan Abu Vulkanik Si Ones terendah",
       "waktu absen tercepat tanpa melewati ambang aman"
     ]
+  },
+  "adegan": {
+    "catatan": "Pengarah visual per layar, keputusan, dan pilihan. Blok ini hanya menata gambar; tidak mengubah satu pun angka atau kalimat. Dibaca ui.js saat runtime. sprite:false menyembunyikan sprite tokoh. sprite_posisi: kiri | tengah | kanan. semua_pilihan berlaku pada fase akibat untuk semua pilihan keputusan itu; pilihan.<id> berlaku pada fase akibat untuk pilihan tertentu.",
+    "kartu_pembuka_latar": [
+      "bg_krakatau.png",
+      "wajah:cho_calm.png|ones_calm.png",
+      "screen_tiba.png"
+    ],
+    "keputusan": {
+      "O1": { "semua_pilihan": { "latar": "bg_ones_kos_tutup.png" } },
+      "O2": { "sprite": false, "mode": "barang_meja" },
+      "C3": { "sprite": false },
+      "O3": { "sprite": false },
+      "C4": { "sprite": false },
+      "O4": {
+        "pilihan": {
+          "o4-dinding": { "sprite_posisi": "kiri" },
+          "o4-bangku": { "sprite_posisi": "kiri" },
+          "o4-buspertama": { "latar": "bg_busway_penuh.png" }
+        }
+      },
+      "C5": { "sprite": false },
+      "O5": {
+        "pilihan": {
+          "o5-tengah": { "sprite_posisi": "tengah" },
+          "o5-belakang": { "sprite_posisi": "kiri" }
+        }
+      }
+    },
+    "kejadian": {
+      "mata": { "sprite": false },
+      "atap": { "sprite": false }
+    }
   }
 }

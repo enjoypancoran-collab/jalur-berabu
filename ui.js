@@ -142,15 +142,54 @@ function bacaVar(nama, fallback) {
   }
 }
 
+// Pengarah visual dari content.adegan (blok tata-gambar, bukan angka/kalimat).
+function adeganKeputusan(id) {
+  const a = content.adegan;
+  return (a && a.keputusan && a.keputusan[id]) || {};
+}
+function adeganKejadian(id) {
+  const a = content.adegan;
+  return (a && a.kejadian && a.kejadian[id]) || {};
+}
+
 // Latar penuh layar (judul, tiba, hitung, memo). Path relatif.
 function setLatarLayar(berkas) {
   const n = el('latar-layar');
   if (!n || !n.style) return;
+  n.classList.remove('redup-lebih');
+  n.style.backgroundPosition = 'center';
+  n.style.backgroundSize = 'cover';
+  n.style.backgroundRepeat = 'no-repeat';
   n.style.backgroundImage = berkas ? 'url("img/' + berkas + '")' : 'none';
 }
 
+// Latar kartu pembuka dari content.adegan.kartu_pembuka_latar[idx], diredupkan.
+// Token "wajah:a.png|b.png" -> dua wajah close-up sebagai latar.
+function setLatarKartu(idx) {
+  const n = el('latar-layar');
+  if (!n || !n.style) return;
+  const daftar = (content.adegan && content.adegan.kartu_pembuka_latar) || [];
+  const spec = daftar[idx] || '';
+  n.classList.add('redup-lebih');
+  n.style.backgroundRepeat = 'no-repeat';
+  const layarKartu = el('layar-kartu');
+  if (spec.indexOf('wajah:') === 0) {
+    const bagian = spec.slice(6).split('|');
+    n.style.backgroundImage = bagian.map((b) => 'url("img/' + b + '")').join(', ');
+    n.style.backgroundPosition = '22% 2%, 78% 2%';
+    n.style.backgroundSize = 'auto 165%, auto 165%';
+    if (layarKartu) layarKartu.classList.add('kartu-wajah');
+  } else {
+    n.style.backgroundImage = spec ? 'url("img/' + spec + '")' : 'none';
+    n.style.backgroundPosition = 'center';
+    n.style.backgroundSize = 'cover';
+    if (layarKartu) layarKartu.classList.remove('kartu-wajah');
+  }
+}
+
 // Latar + sprite satu panel. Kalau sprite gagal dimuat, tampilkan kotak palet.
-function setScene(tokoh, latarBerkas, spriteId) {
+// posisi: 'kiri' | 'tengah' | 'kanan' (default: kiri untuk cho, kanan untuk ones).
+function setScene(tokoh, latarBerkas, spriteId, posisi) {
   const scene = el('scene-' + tokoh);
   if (scene && scene.style) {
     scene.style.backgroundImage = latarBerkas
@@ -173,6 +212,9 @@ function setScene(tokoh, latarBerkas, spriteId) {
     img.hidden = true;
     box.hidden = true;
   }
+  const pos = posisi || (tokoh === 'cho' ? 'kiri' : 'kanan');
+  img.classList.remove('pos-kiri', 'pos-tengah', 'pos-kanan');
+  img.classList.add('pos-' + pos);
 }
 
 // Kanvas partikel abu: titik 1-2 piksel bertepi tajam, hanyut turun. Hormati
@@ -343,6 +385,7 @@ function renderKartu() {
   el('kartu-teks').textContent = k.teks;
   el('kartu-gambar').textContent = k.gambar || '';
   el('tombol-kartu').textContent = k.tombol || content.label.tombol.lanjut;
+  setLatarKartu(sesi.kartuIdx);
   fokus(el('tombol-kartu'));
 }
 
@@ -473,13 +516,48 @@ function renderMain() {
   el('panel-ones').classList.toggle('redup', aktifCho && !onesPra);
   el('kenapa-catatan').hidden = true;
 
-  // Latar keputusan dari field latar; sprite tokoh sesuai aturan aset.
-  // Panel yang menunggu mempertahankan scene terakhirnya.
+  // Latar keputusan dari field latar; sprite tokoh sesuai aturan aset; lalu
+  // ditimpa pengarah visual content.adegan. Panel menunggu tetap pada scene
+  // terakhirnya.
+  const ad = adeganKeputusan(k.id);
+  let latar = k.latar;
+  let spriteId = aktifCho
+    ? spriteCho(content, k, sesi)
+    : spriteOnes(content, sesi);
+  let posisi = null;
+  if (ad.sprite === false) spriteId = null;
+
+  if (sesi.fase === 'akibat') {
+    const pid = sesi.pilihanTerakhir && sesi.pilihanTerakhir.id;
+    const ef =
+      ad.pilihan && pid && ad.pilihan[pid]
+        ? ad.pilihan[pid]
+        : ad.semua_pilihan || null;
+    if (ef) {
+      if (ef.latar) latar = ef.latar;
+      if (ef.sprite_posisi) posisi = ef.sprite_posisi;
+      if (ef.sprite === false) spriteId = null;
+      if (ef.sprite === true && !spriteId) {
+        spriteId = aktifCho
+          ? spriteCho(content, k, sesi)
+          : spriteOnes(content, sesi);
+      }
+    }
+  }
+
+  el('panel-ones').classList.toggle('panel--barang', ad.mode === 'barang_meja');
+
   if (aktifCho) {
     sesi.kepChoTerakhir = k;
-    setScene('cho', k.latar, spriteCho(content, k, sesi));
+    setScene('cho', latar, spriteId, posisi);
   } else {
-    setScene('ones', k.latar, spriteOnes(content, sesi));
+    setScene('ones', latar, spriteId, posisi);
+  }
+
+  if (ad.mode === 'barang_meja' && !aktifCho) {
+    renderBarangMeja(sesi.fase);
+  } else {
+    hapusBarangMeja();
   }
 
   const isiAktif = el(aktifCho ? 'isi-cho' : 'isi-ones');
@@ -545,15 +623,22 @@ function renderBarang(k, isi) {
   const sit = document.createElement('p');
   sit.textContent = k.kalimat_situasi || '';
   isi.append(sit);
-  const info = document.createElement('p');
-  info.textContent = 'Pilih ' + k.slot + ' barang.';
-  isi.append(info);
+
+  const hitung = document.createElement('p');
+  hitung.className = 'barang-hitung';
+  isi.append(hitung);
 
   const dipilih = new Set();
   const lanjut = document.createElement('button');
   lanjut.type = 'button';
   lanjut.textContent = content.label.tombol.lanjut;
   lanjut.disabled = true;
+
+  const perbarui = () => {
+    hitung.textContent =
+      'Barang terpilih: ' + dipilih.size + ' dari ' + k.slot +
+      ' — klik barang di meja';
+  };
 
   content.barang.forEach((it, i) => {
     const baris = document.createElement('label');
@@ -572,11 +657,14 @@ function renderBarang(k, isi) {
         dipilih.delete(it.id);
       }
       lanjut.disabled = dipilih.size !== k.slot;
+      perbarui();
+      syncMeja();
       if (!lanjut.disabled) fokus(lanjut);
     });
     baris.append(cb, document.createTextNode(' ' + (i + 1) + '. ' + it.nama));
     isi.append(baris);
   });
+  perbarui();
 
   lanjut.addEventListener('click', () => {
     if (dipilih.size !== k.slot) return;
@@ -588,7 +676,71 @@ function renderBarang(k, isi) {
   });
   isi.append(lanjut);
   sesi.tombolLanjut = lanjut;
-  fokus(isi.querySelector('input'));
+}
+
+// Barang tergeletak di meja pada scene Si Ones (keputusan O2). Klik gambar =
+// toggle checkbox tersembunyi di konsol. Pada fase akibat, yang diambil pergi.
+function renderBarangMeja(fase) {
+  const host = el('barang-meja-ones');
+  if (!host) return;
+  host.hidden = false;
+
+  if (fase !== 'akibat' && host.children.length !== content.barang.length) {
+    host.replaceChildren();
+    content.barang.forEach((it) => {
+      const img = document.createElement('img');
+      img.className = 'item-meja';
+      img.dataset.barang = it.id;
+      img.alt = it.nama;
+      img.src = 'img/' + it.ikon;
+      img.tabIndex = 0;
+      const toggle = () => {
+        const cb = el('isi-ones').querySelector(
+          'input[data-barang="' + it.id + '"]',
+        );
+        if (cb) cb.click();
+      };
+      img.addEventListener('click', toggle);
+      img.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          toggle();
+        }
+      });
+      host.append(img);
+    });
+  }
+
+  if (fase === 'akibat') {
+    for (const img of [...host.children]) {
+      img.classList.remove('diambil');
+      if ((sesi.barang || []).includes(img.dataset.barang)) {
+        img.classList.add('pergi');
+        setTimeout(() => img.remove(), 360);
+      }
+    }
+    return;
+  }
+  syncMeja();
+}
+
+function syncMeja() {
+  const host = el('barang-meja-ones');
+  if (!host || host.hidden) return;
+  for (const img of host.children) {
+    const cb = el('isi-ones').querySelector(
+      'input[data-barang="' + img.dataset.barang + '"]',
+    );
+    img.classList.toggle('diambil', !!(cb && cb.checked));
+  }
+}
+
+function hapusBarangMeja() {
+  const host = el('barang-meja-ones');
+  if (host) {
+    host.replaceChildren();
+    host.hidden = true;
+  }
 }
 
 function pilih(k, p) {
@@ -696,11 +848,16 @@ function renderSisipan() {
   el('panel-ones').classList.toggle('redup', aktifCho);
   el('kenapa-catatan').hidden = true;
 
-  if (aktifCho) {
-    setScene('cho', ev.latar, spriteCho(content, sesi.kepChoTerakhir, sesi));
+  const adEv = adeganKejadian(ev.id);
+  let spEv;
+  if (adEv.sprite === false) {
+    spEv = null;
+  } else if (aktifCho) {
+    spEv = spriteCho(content, sesi.kepChoTerakhir, sesi);
   } else {
-    setScene('ones', ev.latar, spriteOnes(content, sesi));
+    spEv = spriteOnes(content, sesi);
   }
+  setScene(aktifCho ? 'cho' : 'ones', ev.latar, spEv);
 
   const isi = el(aktifCho ? 'isi-cho' : 'isi-ones');
   isi.replaceChildren();
@@ -1118,6 +1275,8 @@ function ulang() {
   }
   setScene('cho', '', null);
   setScene('ones', '', null);
+  el('panel-ones').classList.remove('panel--barang');
+  hapusBarangMeja();
   el('hitung-teks').replaceChildren();
   el('hasil-uji').textContent = '';
   el('salin-status').hidden = true;
