@@ -1,83 +1,231 @@
 /*
   Jalur Berabu - style.css
-  Lapis 2-3: TATA LETAK FUNGSIONAL SAJA. Palet, tipografi, partikel abu, dan
-  vignette menyusul di lapis 4. Tidak ada gambar dirujuk dari sini.
+  Lapis 4: lapisan visual.
+
+  Palet berasal dari content.aset.palet. ui.js menyuntikkannya saat runtime
+  sebagai custom properties: --langit --abu --aspal --hijau_gadog --jingga
+  --merah_dosis. CSS di sini hanya memakai var(); nilai hex yang muncul sebagai
+  fallback hanyalah abu-abu netral untuk mode terdegradasi (kalau content gagal
+  dimuat), bukan salinan palet.
 */
 
+* { box-sizing: border-box; }
+
 body {
-  margin: 1rem;
+  margin: 0;
   font-family: system-ui, sans-serif;
-  line-height: 1.4;
+  line-height: 1.45;
+  color: var(--aspal, #333);
+  background: var(--langit, #ddd);
 }
 
-#kemajuan {
-  font-weight: bold;
+button {
+  font: inherit;
+  color: inherit;
+  padding: 0.4rem 0.7rem;
+  border: 1px solid var(--aspal, #333);
+  background: color-mix(in srgb, var(--langit, #ddd) 55%, white);
+  cursor: pointer;
+}
+button:hover {
+  background: color-mix(in srgb, var(--hijau_gadog, #363) 22%, white);
+}
+button:focus-visible {
+  outline: 3px solid var(--jingga, #b60);
+  outline-offset: 1px;
 }
 
-.hud {
-  font-family: ui-monospace, monospace;
-  white-space: pre;
-  border: 1px solid;
-  padding: 0.5rem;
-  margin: 0.5rem 0 1rem;
+h1, h2, h3 { margin: 0.4rem 0; }
+pre { white-space: pre-wrap; font-family: ui-monospace, monospace; }
+
+/* --- lapisan latar & atmosfer --- */
+
+#latar-layar {
+  position: fixed;
+  inset: 0;
+  z-index: 10;
+  background-color: var(--langit, #ddd);
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
 }
 
-.panel-panel {
-  display: flex;
-  gap: 1.5rem;
-  align-items: flex-start;
+#vignette {
+  position: fixed;
+  inset: 0;
+  z-index: 52;
+  pointer-events: none;
+  background: radial-gradient(ellipse at center,
+    rgba(0, 0, 0, 0) 58%,
+    color-mix(in srgb, var(--aspal, #333) 46%, transparent) 100%);
 }
 
-.panel {
-  flex: 1 1 0;
-  min-width: 0;
-  border: 1px solid;
-  padding: 0.75rem;
+#abu {
+  position: fixed;
+  inset: 0;
+  z-index: 55;
+  pointer-events: none;
 }
 
-/* Panel yang menunggu giliran: diredupkan, TIDAK PERNAH disembunyikan. */
-.panel.redup {
-  opacity: 0.4;
-  filter: grayscale(1);
+#panggung {
+  position: relative;
+  z-index: 50;
+  max-width: 1600px;
+  margin: 0 auto;
+  padding: 1rem 1.25rem 2.5rem;
 }
 
-.panel-isi button {
-  display: block;
-  margin: 0.35rem 0;
-  text-align: left;
+/* --- layar --- */
+
+.layar {
+  padding: 1rem 1.25rem;
+  border: 1px solid var(--aspal, #333);
+  background: color-mix(in srgb, var(--abu, #eee) 90%, transparent);
 }
+
+#status { padding: 1rem; }
+#kemajuan { font-weight: 700; }
+.catatan-gambar { opacity: 0.65; font-size: 0.9em; }
 
 #kenapa-catatan {
-  border-left: 3px solid;
+  border-left: 3px solid var(--jingga, #b60);
   padding-left: 0.5rem;
   font-style: italic;
 }
 
-.catatan-gambar {
-  opacity: 0.6;
-  font-size: 0.9em;
+/* --- HUD: batang + angka + label pita ambang (warna bukan satu-satunya
+       pembawa informasi) --- */
+
+.hud {
+  border: 1px solid var(--aspal, #333);
+  padding: 0.6rem 0.85rem;
+  margin: 0.5rem 0 1rem;
+  background: color-mix(in srgb, var(--abu, #eee) 92%, transparent);
+}
+.hud-judul { font-weight: 700; margin-bottom: 0.4rem; }
+.hud-baris {
+  display: grid;
+  grid-template-columns: 6.5rem 1fr auto auto;
+  align-items: center;
+  gap: 0.65rem;
+  margin: 0.3rem 0;
+}
+.hud-nama { font-weight: 600; }
+.hud-track {
+  position: relative;
+  height: 0.9rem;
+  border: 1px solid var(--aspal, #333);
+  background: color-mix(in srgb, var(--aspal, #333) 16%, var(--abu, #eee));
+  overflow: hidden;
+}
+.hud-fill {
+  position: absolute;
+  left: 0; top: 0; bottom: 0;
+  background: var(--merah_dosis, #a33);
+}
+.hud-ambang {
+  position: absolute;
+  top: -2px; bottom: -2px;
+  width: 2px;
+  background: var(--aspal, #333);
+}
+.hud-angka { font-variant-numeric: tabular-nums; font-weight: 700; }
+.hud-status { font-size: 0.85em; opacity: 0.85; white-space: nowrap; }
+
+/* --- dua panel giliran --- */
+
+.panel-panel {
+  display: flex;
+  gap: 1.25rem;
+  align-items: stretch;
+}
+.panel {
+  flex: 1 1 0;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--aspal, #333);
+  background: color-mix(in srgb, var(--abu, #eee) 94%, transparent);
+}
+/* Panel yang menunggu giliran: diredupkan, TIDAK PERNAH disembunyikan. */
+.panel.redup { opacity: 0.42; filter: grayscale(0.85); }
+
+.panel-scene {
+  position: relative;
+  height: 200px;
+  overflow: hidden;
+  border-bottom: 1px solid var(--aspal, #333);
+  /* Kalau gambar latar gagal dimuat, tersisa kotak berwarna dari palet. */
+  background-color: var(--abu, #eee);
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+}
+.panel-sprite {
+  position: absolute;
+  left: 50%;
+  bottom: 0;
+  transform: translateX(-50%);
+  height: 92%;
+  width: auto;
+  image-rendering: pixelated;
+}
+/* Kotak pengganti sprite kalau gambarnya gagal dimuat. */
+.sprite-kotak {
+  position: absolute;
+  left: 50%;
+  bottom: 6%;
+  transform: translateX(-50%);
+  width: 28%;
+  height: 78%;
+  background: var(--jingga, #b60);
+  border: 2px solid var(--aspal, #333);
 }
 
-#hitung-teks p,
-#memo-isi p,
-#memo-isi li {
-  max-width: 62ch;
+.panel h2 { padding: 0 0.85rem; }
+.panel-isi { padding: 0.5rem 0.85rem 0.9rem; flex: 1; }
+.panel-isi button { display: block; margin: 0.4rem 0; text-align: left; width: 100%; }
+
+/* --- Layar Hitung / memo / koleksi --- */
+
+#hitung-teks {
+  border: 1px solid var(--aspal, #333);
+  padding: 0.8rem 1rem;
+  background: color-mix(in srgb, var(--abu, #eee) 92%, transparent);
+}
+#hitung-teks p, #memo-isi p, #memo-isi li { max-width: 62ch; }
+#memo-isi pre { max-width: 62ch; }
+
+#salin-status {
+  margin-left: 0.6rem;
+  padding: 0.15rem 0.5rem;
+  background: var(--hijau_gadog, #363);
+  color: white;
 }
 
 .kartu {
-  border: 1px solid;
-  padding: 0.5rem 0.75rem;
-  margin: 0.4rem 0;
-  max-width: 72ch;
+  border: 1px solid var(--aspal, #333);
+  background: color-mix(in srgb, var(--abu, #eee) 94%, transparent);
+  padding: 0.5rem 0.8rem;
+  margin: 0.45rem 0;
+  max-width: 74ch;
 }
+.kartu.terkunci { opacity: 0.5; }
 
-.kartu.terkunci {
-  opacity: 0.5;
+/* --- responsif --- */
+
+@media (max-width: 1023px) {
+  #panggung::before {
+    content: "Tata letak dirancang untuk lebar minimal 1024 piksel.";
+    display: block;
+    margin-bottom: 0.6rem;
+    padding: 0.35rem 0.6rem;
+    border: 1px dashed var(--aspal, #333);
+    font-size: 0.9em;
+  }
+  .panel-panel { flex-direction: column; }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  * {
-    transition: none !important;
-    animation: none !important;
-  }
+  * { transition: none !important; animation: none !important; }
 }

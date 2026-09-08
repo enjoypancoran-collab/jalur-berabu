@@ -8,87 +8,104 @@
 </head>
 <body>
   <!--
-    Lapis 3: Layar Hitung (mengikuti layar.hitung.urutan, angka dihitung ulang
-    mesin), sistem 14 kartu fakta + layar koleksi, kartu memo dengan Salin hasil.
+    Lapis 4: lapisan visual. Palet dari content.aset.palet (disuntik ui.js
+    sebagai custom properties), latar per keputusan dari field latar, sprite
+    tokoh, kanvas partikel abu, dan vignette. Gambar yang gagal dimuat diganti
+    kotak berwarna dari palet; layar tidak pernah kosong. Semua path relatif.
     Perlu server lokal (ES module + fetch):
       node tools/serve.mjs      lalu buka http://localhost:8000/
   -->
-  <p id="status">Memuat content.json&hellip;</p>
+  <div id="latar-layar"></div>
 
-  <!-- Layar judul -->
-  <section id="layar-judul" class="layar" hidden>
-    <h1 id="judul"></h1>
-    <p id="subjudul"></p>
-    <p id="peringatan-suara"></p>
-    <button type="button" id="tombol-mulai"></button>
-    <button type="button" id="tombol-koleksi-judul"></button>
-    <p>
-      <button type="button" id="tombol-uji">Uji angka acuan</button>
-    </p>
-    <pre id="hasil-uji"></pre>
-  </section>
+  <div id="panggung">
+    <p id="status">Memuat content.json&hellip;</p>
 
-  <!-- Tiga kartu pembuka -->
-  <section id="layar-kartu" class="layar" hidden>
-    <p id="kartu-nomor"></p>
-    <p id="kartu-teks"></p>
-    <p id="kartu-gambar" class="catatan-gambar"></p>
-    <button type="button" id="tombol-kartu"></button>
-  </section>
+    <!-- Layar judul -->
+    <section id="layar-judul" class="layar" hidden>
+      <h1 id="judul"></h1>
+      <p id="subjudul"></p>
+      <p id="peringatan-suara"></p>
+      <button type="button" id="tombol-mulai"></button>
+      <button type="button" id="tombol-koleksi-judul"></button>
+      <p>
+        <button type="button" id="tombol-uji">Uji angka acuan</button>
+      </p>
+      <pre id="hasil-uji"></pre>
+    </section>
 
-  <!-- Permainan: 14 keputusan bergantian (plus kejadian sisipan) -->
-  <section id="layar-main" class="layar" hidden>
-    <p id="kemajuan"></p>
-    <div class="hud" id="hud"></div>
-    <div class="panel-panel">
-      <div class="panel" id="panel-cho">
-        <h2 id="nama-cho"></h2>
-        <div class="panel-isi" id="isi-cho"></div>
+    <!-- Tiga kartu pembuka -->
+    <section id="layar-kartu" class="layar" hidden>
+      <p id="kartu-nomor"></p>
+      <p id="kartu-teks"></p>
+      <p id="kartu-gambar" class="catatan-gambar"></p>
+      <button type="button" id="tombol-kartu"></button>
+    </section>
+
+    <!-- Permainan: 14 keputusan bergantian (plus kejadian sisipan) -->
+    <section id="layar-main" class="layar" hidden>
+      <p id="kemajuan"></p>
+      <div class="hud" id="hud"></div>
+      <div class="panel-panel">
+        <div class="panel" id="panel-cho">
+          <div class="panel-scene" id="scene-cho">
+            <div class="sprite-kotak" id="spritebox-cho" hidden></div>
+            <img class="panel-sprite" id="sprite-cho" alt="" hidden>
+          </div>
+          <h2 id="nama-cho"></h2>
+          <div class="panel-isi" id="isi-cho"></div>
+        </div>
+        <div class="panel" id="panel-ones">
+          <div class="panel-scene" id="scene-ones">
+            <div class="sprite-kotak" id="spritebox-ones" hidden></div>
+            <img class="panel-sprite" id="sprite-ones" alt="" hidden>
+          </div>
+          <h2 id="nama-ones"></h2>
+          <div class="panel-isi" id="isi-ones"></div>
+        </div>
       </div>
-      <div class="panel" id="panel-ones">
-        <h2 id="nama-ones"></h2>
-        <div class="panel-isi" id="isi-ones"></div>
-      </div>
-    </div>
-    <p id="kenapa-catatan" hidden></p>
-    <p id="bantuan-pintasan" class="catatan-gambar"></p>
-  </section>
+      <p id="kenapa-catatan" hidden></p>
+      <p id="bantuan-pintasan" class="catatan-gambar"></p>
+    </section>
 
-  <!-- Layar tiba -->
-  <section id="layar-tiba" class="layar" hidden>
-    <h2>Tiba</h2>
-    <p id="tiba-teks"></p>
-    <div class="hud" id="hud-tiba"></div>
-    <button type="button" id="tombol-tiba-lanjut"></button>
-  </section>
+    <!-- Layar tiba -->
+    <section id="layar-tiba" class="layar" hidden>
+      <h2>Tiba</h2>
+      <p id="tiba-teks"></p>
+      <div class="hud" id="hud-tiba"></div>
+      <button type="button" id="tombol-tiba-lanjut"></button>
+    </section>
 
-  <!-- Layar Hitung -->
-  <section id="layar-hitung" class="layar" hidden>
-    <div class="hud" id="hitung-hud"></div>
-    <div id="hitung-teks"></div>
-    <button type="button" id="hitung-lanjut" hidden></button>
-  </section>
+    <!-- Layar Hitung -->
+    <section id="layar-hitung" class="layar" hidden>
+      <div class="hud" id="hitung-hud"></div>
+      <div id="hitung-teks"></div>
+      <button type="button" id="hitung-lanjut" hidden></button>
+    </section>
 
-  <!-- Kartu memo -->
-  <section id="layar-memo" class="layar" hidden>
-    <h2>Memo</h2>
-    <div id="memo-isi"></div>
-    <p id="memo-kartu-hitung"></p>
-    <button type="button" id="tombol-salin"></button>
-    <span id="salin-status" hidden></span>
-    <p>
-      <button type="button" id="tombol-koleksi-memo"></button>
-      <button type="button" id="tombol-ulang"></button>
-    </p>
-  </section>
+    <!-- Kartu memo -->
+    <section id="layar-memo" class="layar" hidden>
+      <h2>Memo</h2>
+      <div id="memo-isi"></div>
+      <p id="memo-kartu-hitung"></p>
+      <button type="button" id="tombol-salin"></button>
+      <span id="salin-status" hidden></span>
+      <p>
+        <button type="button" id="tombol-koleksi-memo"></button>
+        <button type="button" id="tombol-ulang"></button>
+      </p>
+    </section>
 
-  <!-- Layar koleksi kartu -->
-  <section id="layar-koleksi" class="layar" hidden>
-    <h2>Koleksi kartu fakta</h2>
-    <p id="koleksi-hitung"></p>
-    <div id="koleksi-daftar"></div>
-    <button type="button" id="tombol-koleksi-kembali">Kembali</button>
-  </section>
+    <!-- Layar koleksi kartu -->
+    <section id="layar-koleksi" class="layar" hidden>
+      <h2>Koleksi kartu fakta</h2>
+      <p id="koleksi-hitung"></p>
+      <div id="koleksi-daftar"></div>
+      <button type="button" id="tombol-koleksi-kembali">Kembali</button>
+    </section>
+  </div>
+
+  <div id="vignette"></div>
+  <canvas id="abu"></canvas>
 
   <script type="module" src="ui.js"></script>
 </body>

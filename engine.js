@@ -256,6 +256,41 @@ export function hitungWfh(content) {
 }
 
 /**
+ * Sprite Si Ones, dipilih mesin sesuai aset.aturan_aset_ones.
+ * state: { barang: string[], onesSpriteEfek?: string }
+ */
+export function spriteOnes(content, state) {
+  const st = state || {};
+  if (st.onesSpriteEfek) return st.onesSpriteEfek; // ones_tired setelah iritasi mata
+  const b = st.barang || [];
+  if (b.includes('lensa_kontak')) return 'ones_lensa';
+  if (b.includes('kn95') && b.includes('goggle')) return 'ones_mask';
+  if (b.includes('masker_kain')) return 'ones_cloth_loose';
+  return 'ones_calm';
+}
+
+/**
+ * Sprite Bro Cho. Basis diambil dari keputusan.tokoh_aset (token pertama
+ * sebelum tanda '|'), lalu ditimpa sesuai aturan_aset_cho:
+ * cho_mask_tense selama C4/C6 (menang atas semua), cho_tired setelah serempet
+ * (menang di scene lain), cho_mask di C3/C5/C7, cho_jacket dari efek.aset_tokoh
+ * c1-info, sisanya cho_calm.
+ * state: { choSpriteEfek?: string, choTiredSprite?: string }
+ */
+export function spriteCho(content, keputusan, state) {
+  const st = state || {};
+  const id = keputusan ? keputusan.id : '';
+  const base = ((keputusan && keputusan.tokoh_aset) || 'cho_calm')
+    .split('|')[0]
+    .trim();
+  if (id === 'C4' || id === 'C6') return base; // cho_mask_tense
+  if (st.choTiredSprite) return st.choTiredSprite; // cho_tired, berlaku sampai akhir
+  if (id === 'C3' || id === 'C5' || id === 'C7') return base; // cho_mask
+  if (st.choSpriteEfek) return st.choSpriteEfek; // cho_jacket
+  return base; // cho_calm
+}
+
+/**
  * Kumpulan id kartu fakta yang terbuka dari keadaan sesi. Semua sumber
  * ditelusuri dari content, tidak ada id yang ditulis di kode.
  *

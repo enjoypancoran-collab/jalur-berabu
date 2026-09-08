@@ -16,6 +16,8 @@ import {
   undiFaktorAngin,
   bulatkanSatuDesimal,
   kartuFaktaTerbuka,
+  spriteCho,
+  spriteOnes,
 } from './engine.js';
 import {
   kartuTerbukaTersimpan,
@@ -56,6 +58,7 @@ async function mulai() {
 
   el('status').hidden = true;
   P = content.antarmuka.pintasan;
+  terapkanPalet();
 
   if (window.matchMedia && window.matchMedia('(max-width: 599px)').matches) {
     document.body.replaceChildren();
@@ -97,7 +100,148 @@ async function mulai() {
   );
 
   window.addEventListener('keydown', tekan);
+  mulaiAbu();
   pergiKe('judul');
+}
+
+// --- lapisan visual ------------------------------------------------------
+
+// Suntik palet content.aset.palet sebagai custom properties di :root.
+function terapkanPalet() {
+  const pal = content.aset && content.aset.palet;
+  const root = document.documentElement;
+  if (!pal || !root || !root.style) return;
+  for (const [nama, nilai] of Object.entries(pal)) {
+    root.style.setProperty('--' + nama, nilai);
+  }
+}
+
+function prefersReducedMotion() {
+  return !!(
+    window.matchMedia &&
+    window.matchMedia('(prefers-reduced-motion: reduce)').matches
+  );
+}
+
+function bacaVar(nama, fallback) {
+  try {
+    if (typeof getComputedStyle !== 'function') return fallback;
+    const v = getComputedStyle(document.documentElement)
+      .getPropertyValue(nama)
+      .trim();
+    return v || fallback;
+  } catch (e) {
+    return fallback;
+  }
+}
+
+// Latar penuh layar (judul, tiba, hitung, memo). Path relatif.
+function setLatarLayar(berkas) {
+  const n = el('latar-layar');
+  if (!n || !n.style) return;
+  n.style.backgroundImage = berkas ? 'url("img/' + berkas + '")' : 'none';
+}
+
+// Latar + sprite satu panel. Kalau sprite gagal dimuat, tampilkan kotak palet.
+function setScene(tokoh, latarBerkas, spriteId) {
+  const scene = el('scene-' + tokoh);
+  if (scene && scene.style) {
+    scene.style.backgroundImage = latarBerkas
+      ? 'url("img/' + latarBerkas + '")'
+      : 'none';
+  }
+  const img = el('sprite-' + tokoh);
+  const box = el('spritebox-' + tokoh);
+  if (!img || !box) return;
+  if (spriteId) {
+    box.hidden = true;
+    img.hidden = false;
+    img.alt = '';
+    img.onerror = () => {
+      img.hidden = true;
+      box.hidden = false;
+    };
+    img.src = 'img/' + spriteId + '.png';
+  } else {
+    img.hidden = true;
+    box.hidden = true;
+  }
+}
+
+// Kanvas partikel abu: titik 1-2 piksel bertepi tajam, hanyut turun. Hormati
+// prefers-reduced-motion (satu bingkai statis, tanpa loop animasi).
+function mulaiAbu() {
+  if (sesi._abuMulai) return;
+  const cv = el('abu');
+  if (!cv || typeof cv.getContext !== 'function') return;
+  sesi._abuMulai = true;
+
+  const ctx = cv.getContext('2d');
+  const warna = bacaVar('--aspal', '#3a3f45');
+  let W = 0;
+  let H = 0;
+  let titik = [];
+
+  const ukur = () => {
+    W = cv.width = window.innerWidth || 1024;
+    H = cv.height = window.innerHeight || 768;
+  };
+  const isiUlang = () => {
+    const n = Math.max(40, Math.round((W * H) / 16000));
+    titik = [];
+    for (let i = 0; i < n; i += 1) {
+      titik.push({
+        x: Math.random() * W,
+        y: Math.random() * H,
+        s: Math.random() < 0.5 ? 1 : 2,
+        vy: 10 + Math.random() * 26,
+        vx: -8 + Math.random() * 16,
+        a: 0.12 + Math.random() * 0.33,
+      });
+    }
+  };
+  const gambar = () => {
+    ctx.clearRect(0, 0, W, H);
+    ctx.fillStyle = warna;
+    for (const p of titik) {
+      ctx.globalAlpha = p.a;
+      ctx.fillRect(Math.round(p.x), Math.round(p.y), p.s, p.s);
+    }
+    ctx.globalAlpha = 1;
+  };
+
+  ukur();
+  isiUlang();
+  window.addEventListener('resize', () => {
+    ukur();
+    isiUlang();
+    if (prefersReducedMotion()) gambar();
+  });
+
+  if (prefersReducedMotion()) {
+    gambar();
+    return;
+  }
+
+  let last = 0;
+  const tick = (now) => {
+    if (!last) last = now;
+    const dt = Math.min(0.05, (now - last) / 1000);
+    last = now;
+    for (const p of titik) {
+      p.y += p.vy * dt;
+      p.x += p.vx * dt;
+      if (p.y > H + 2) {
+        p.y = -2;
+        p.x = Math.random() * W;
+      }
+      if (p.x > W + 2) p.x -= W + 4;
+      if (p.x < -2) p.x += W + 4;
+    }
+    gambar();
+    requestAnimationFrame(tick);
+  };
+  requestAnimationFrame(tick);
 }
 
 function resetSesi() {
@@ -128,6 +272,12 @@ function resetSesi() {
     tamatDicatat: false,
     hitung: { antrean: [], idx: 0, selesai: false, timer: null },
     kartuTerbuka: new Set(),
+    // status sprite (lapis 4)
+    kepChoTerakhir: null,
+    choSpriteEfek: null, // dari efek.aset_tokoh (cho_jacket)
+    choTiredSprite: null, // dari efek.aset_tokoh_setelah_serempet (cho_tired)
+    onesSpriteEfek: null, // dari efek.aset_tokoh kejadian mata (ones_tired)
+    _abuMulai: sesi ? sesi._abuMulai : false,
   };
 }
 
@@ -141,6 +291,15 @@ function pergiKe(nama) {
   for (const l of LAYAR) el('layar-' + l).hidden = l !== nama;
   if (nama !== 'koleksi') sesi.layarSebelum = sesi.layar;
   sesi.layar = nama;
+
+  // Latar penuh layar dari field latar (kalau ada untuk layar ini).
+  const latarLayar = {
+    judul: content.layar.judul && content.layar.judul.latar,
+    tiba: content.layar.tiba && content.layar.tiba.latar,
+    hitung: content.layar.hitung && content.layar.hitung.latar,
+    memo: content.layar.memo && content.layar.memo.latar,
+  }[nama];
+  setLatarLayar(latarLayar || '');
 
   if (nama === 'judul') fokus(el('tombol-mulai'));
   else if (nama === 'kartu') renderKartu();
@@ -205,20 +364,59 @@ function hasilOnes() {
   return jalankanRute(content, cfg(), 'ones', sesi.pilihanOnes, opsiOnes());
 }
 
-function batang(pp) {
-  const lebar = 20;
-  const isi = Math.max(0, Math.min(lebar, Math.round(pp)));
-  return '█'.repeat(isi) + '░'.repeat(lebar - isi);
+// Pita ambang (mis. "Aman", "Terpapar ringan") supaya warna batang bukan
+// satu-satunya pembawa informasi.
+function statusAmbang(pp) {
+  for (const a of content.konstanta.ambang) {
+    if (a.maks === null || pp <= a.maks) return a.status;
+  }
+  return '';
+}
+
+function barisHud(nama, pp) {
+  const MAKS = 15;
+  const row = document.createElement('div');
+  row.className = 'hud-baris';
+
+  const lab = document.createElement('span');
+  lab.className = 'hud-nama';
+  lab.textContent = nama;
+
+  const track = document.createElement('span');
+  track.className = 'hud-track';
+  const fill = document.createElement('span');
+  fill.className = 'hud-fill';
+  fill.style.width = Math.min(100, (pp / MAKS) * 100).toFixed(1) + '%';
+  const tanda = document.createElement('span');
+  tanda.className = 'hud-ambang';
+  tanda.style.left =
+    ((content.konstanta.ambang_aman / MAKS) * 100).toFixed(1) + '%';
+  tanda.title = 'batas aman ' + fmt1(content.konstanta.ambang_aman) + ' poin';
+  track.append(fill, tanda);
+
+  const angka = document.createElement('span');
+  angka.className = 'hud-angka';
+  // Angka selalu tertulis di sebelah batang.
+  angka.textContent = fmt1(pp) + ' poin';
+
+  const stat = document.createElement('span');
+  stat.className = 'hud-status';
+  stat.textContent = statusAmbang(pp);
+
+  row.append(lab, track, angka, stat);
+  return row;
 }
 
 function renderHud(targetId) {
+  const host = el(targetId);
+  if (!host) return;
   const c = hasilCho().paparan;
   const o = hasilOnes().paparan;
-  el(targetId).textContent = [
-    content.label.paparan_penuh,
-    '  ' + NAMA.cho.padEnd(9) + batang(c) + '  ' + fmt1(c) + ' poin',
-    '  ' + NAMA.ones.padEnd(9) + batang(o) + '  ' + fmt1(o) + ' poin',
-  ].join('\n');
+  host.replaceChildren();
+  const judul = document.createElement('div');
+  judul.className = 'hud-judul';
+  judul.textContent = content.label.paparan_penuh;
+  host.append(judul, barisHud(NAMA.cho, c), barisHud(NAMA.ones, o));
 }
 
 function bukaKartu() {
@@ -252,6 +450,15 @@ function renderMain() {
   el('panel-cho').classList.toggle('redup', !aktifCho);
   el('panel-ones').classList.toggle('redup', aktifCho);
   el('kenapa-catatan').hidden = true;
+
+  // Latar keputusan dari field latar; sprite tokoh sesuai aturan aset.
+  // Panel yang menunggu mempertahankan scene terakhirnya.
+  if (aktifCho) {
+    sesi.kepChoTerakhir = k;
+    setScene('cho', k.latar, spriteCho(content, k, sesi));
+  } else {
+    setScene('ones', k.latar, spriteOnes(content, sesi));
+  }
 
   const isiAktif = el(aktifCho ? 'isi-cho' : 'isi-ones');
   if (sesi.fase === 'pilih') {
@@ -346,11 +553,24 @@ function renderBarang(k, isi) {
 
 function pilih(k, p) {
   if (sesi.layar !== 'main' || sesi.fase !== 'pilih') return;
-  if (k.tokoh === 'cho') sesi.pilihanCho.push(p.id);
-  else sesi.pilihanOnes.push(p.id);
+  if (k.tokoh === 'cho') {
+    sesi.pilihanCho.push(p.id);
+    sesi.kepChoTerakhir = k;
+  } else {
+    sesi.pilihanOnes.push(p.id);
+  }
 
   if (p.efek && p.efek.peluang_serempet !== undefined) {
     sesi.serempet = Math.random() < p.efek.peluang_serempet;
+  }
+  // sprite Bro Cho: baca dari efek.aset_tokoh (dan varian setelah serempet)
+  if (p.efek && p.efek.aset_tokoh) sesi.choSpriteEfek = p.efek.aset_tokoh;
+  if (
+    sesi.serempet &&
+    p.efek &&
+    p.efek.aset_tokoh_setelah_serempet
+  ) {
+    sesi.choTiredSprite = p.efek.aset_tokoh_setelah_serempet;
   }
   sesi.pilihanTerakhir = p;
   sesi.fase = 'akibat';
@@ -436,6 +656,12 @@ function renderSisipan() {
   el('panel-ones').classList.toggle('redup', aktifCho);
   el('kenapa-catatan').hidden = true;
 
+  if (aktifCho) {
+    setScene('cho', ev.latar, spriteCho(content, sesi.kepChoTerakhir, sesi));
+  } else {
+    setScene('ones', ev.latar, spriteOnes(content, sesi));
+  }
+
   const isi = el(aktifCho ? 'isi-cho' : 'isi-ones');
   isi.replaceChildren();
   isi.dataset.terisi = '1';
@@ -483,6 +709,8 @@ function pilihSisipan(ev, p) {
   if (sesi.fase !== 'sisipan-pilih') return;
   if (ev.id === 'mata') sesi.pilihanMata = p.id;
   if (ev.id === 'atap') sesi.pilihanAtap = p.id;
+  // sprite Si Ones: baca dari efek.aset_tokoh kejadian (mis. ones_tired)
+  if (p.efek && p.efek.aset_tokoh) sesi.onesSpriteEfek = p.efek.aset_tokoh;
   sesi.sisipanTerakhir = p;
   sesi.fase = 'sisipan-akibat';
   renderSisipan();
@@ -824,6 +1052,8 @@ function ulang() {
     el(id).replaceChildren();
     delete el(id).dataset.terisi;
   }
+  setScene('cho', '', null);
+  setScene('ones', '', null);
   el('hitung-teks').replaceChildren();
   el('hasil-uji').textContent = '';
   el('salin-status').hidden = true;
