@@ -454,7 +454,7 @@
       "urutan": 5,
       "latar": "bg_cho_spbu.png",
       "tokoh_aset": "cho_mask",
-      "kalimat_situasi": "Di pompa sebelah berhenti mobil rombongan carpool Si Ones, kebetulan searah ke Gadog. Lewat jendela, Bro Cho melihat masker kain seorang penumpang melorot di dagu.",
+      "kalimat_situasi": "Di pom bensin, Bro Cho melihat masker kain seseorang tak dikenal melorot di dagu.",
       "catatan_mesin": "Menit jendela terbuka menggantikan menit kabin dengan laju mobil_jendela_terbuka, tidak menambah panjang perjalanan.",
       "pilihan": [
         {
@@ -1443,7 +1443,22 @@
           "o5-tengah": { "sprite_posisi": "tengah" },
           "o5-belakang": { "sprite_posisi": "kiri" }
         }
-      }
+      },
+      "C6": {
+        "sprite": false,
+        "pilihan": {
+          "c6-wiper": { "latar": "bg_cho_tol_baret.png" }
+        }
+      },
+      "C7": {
+        "sprite": false,
+        "pilihan": {
+          "c7-luar": { "latar": "bg_ruang_kantor.png" },
+          "c7-dalam": { "latar": "bg_ruang_kantor.png" },
+          "c7-meja": { "latar": "bg_teman_kesal.png" }
+        }
+      },
+      "O7": { "sprite": false }
     },
     "kejadian": {
       "mata": { "sprite": false },
