@@ -40,6 +40,7 @@
     <section id="layar-kartu" class="layar layar--tengah" hidden>
       <div class="pembuka-kartu">
         <p class="kicker" id="kartu-nomor"></p>
+        <div class="pembuka-ilustrasi" id="kartu-ilustrasi" aria-hidden="true"></div>
         <p class="pembuka-teks" id="kartu-teks"></p>
         <p class="caption" id="kartu-gambar"></p>
         <button type="button" id="tombol-kartu" class="btn btn--utama"></button>
@@ -140,6 +141,35 @@
   <div id="grain"></div>
   <canvas id="abu"></canvas>
   <div id="salin-status" role="status" hidden></div>
+
+  <!-- Sorotan pengenalan bertahap: muncul sekali di keputusan pertama.
+       Menjelaskan dua panel, batang Poin Paparan Abu Vulkanik, dan jam absen.
+       Tidak muncul lagi setelah dilihat, kecuali pemain menekan R. -->
+  <div id="intro" class="tindih" role="dialog" aria-modal="true"
+       aria-labelledby="intro-teks" hidden>
+    <div class="intro-cincin" id="intro-cincin"></div>
+    <div class="intro-kotak" id="intro-kotak">
+      <p class="kicker" id="intro-langkah"></p>
+      <p id="intro-teks"></p>
+      <div class="intro-aksi">
+        <button type="button" id="intro-lewati" class="btn btn--hantu btn--kecil"></button>
+        <button type="button" id="intro-lanjut" class="btn btn--utama btn--kecil"></button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Layar bantuan: dibuka dengan H dari layar mana pun. Daftar pintasan dan
+       penjelasan singkat cara main. -->
+  <div id="bantuan" class="tindih" role="dialog" aria-modal="true"
+       aria-labelledby="bantuan-judul" hidden>
+    <div class="bantuan-panel">
+      <h2 id="bantuan-judul"></h2>
+      <div id="bantuan-caramain"></div>
+      <h3 id="bantuan-pintasan-judul">Pintasan papan ketik</h3>
+      <dl id="bantuan-pintasan-daftar" class="pintasan-daftar"></dl>
+      <button type="button" id="bantuan-tutup" class="btn btn--hantu"></button>
+    </div>
+  </div>
 
   <script type="module" src="ui.js"></script>
 </body>

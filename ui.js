@@ -26,6 +26,8 @@ import {
   lencanaTersimpan,
   simpanLencana,
   tambahTamat,
+  introDilihatTersimpan,
+  tandaiIntroDilihat,
 } from './save.js';
 
 // Satu-satunya dua label tampilan yang tidak ada di content.json: content
@@ -108,6 +110,9 @@ async function mulai() {
   el('tombol-koleksi-kembali').addEventListener('click', () =>
     pergiKe(sesi.layarSebelum || 'judul'),
   );
+
+  siapkanBantuan();
+  siapkanIntro();
 
   window.addEventListener('keydown', tekan);
   mulaiAbu();
@@ -359,6 +364,13 @@ function resetSesi() {
     tamatDicatat: false,
     hitung: { antrean: [], idx: 0, selesai: false, timer: null },
     kartuTerbuka: new Set(),
+    // sorotan pengenalan (lapis 5). introPaksa dipasang oleh R agar sorotan
+    // muncul lagi walau sudah pernah dilihat; selain itu gerbangnya localStorage.
+    introPaksa: false,
+    introDijalankan: false,
+    introAktif: false,
+    introLangkah: 0,
+    bantuanAktif: false,
     // status sprite (lapis 4)
     kepChoTerakhir: null,
     choSpriteEfek: null, // dari efek.aset_tokoh (cho_jacket)
@@ -420,8 +432,174 @@ function renderKartu() {
   el('kartu-teks').textContent = k.teks;
   el('kartu-gambar').textContent = k.gambar || '';
   el('tombol-kartu').textContent = k.tombol || content.label.tombol.lanjut;
+  ilustrasiKartu(sesi.kartuIdx, k);
   setLatarKartu(sesi.kartuIdx);
   fokus(el('tombol-kartu'));
+}
+
+// Ilustrasi kartu pembuka, dibangun dari deskripsi gambar tiap kartu di
+// content (bukan salinan angka/kalimat): tokoh berdampingan, dua batang
+// Poin Paparan Abu Vulkanik, lalu jam dengan sebuah pilihan bertanda menit.
+function ilustrasiKartu(idx, k) {
+  const host = el('kartu-ilustrasi');
+  if (!host) return;
+  host.replaceChildren();
+  host.dataset.kartu = String(idx + 1);
+  if (idx === 0) host.append(ilusTokoh());
+  else if (idx === 1) host.append(ilusBatang());
+  else if (idx === 2) host.append(ilusJam(k));
+}
+
+// "dua tokoh berdampingan" — sprite pertama tiap tokoh dari content.aset.
+function ilusTokoh() {
+  const wrap = document.createElement('div');
+  wrap.className = 'ilus-tokoh';
+  const pasang = [
+    [(content.aset.tokoh_cho || [])[0], NAMA.cho],
+    [(content.aset.tokoh_ones || [])[0], NAMA.ones],
+  ];
+  for (const [spriteId, nama] of pasang) {
+    const fig = document.createElement('figure');
+    fig.className = 'ilus-tokoh-fig';
+    const kotak = document.createElement('span');
+    kotak.className = 'ilus-kotak';
+    kotak.hidden = true;
+    if (spriteId) {
+      const img = document.createElement('img');
+      img.alt = '';
+      img.onerror = () => {
+        img.hidden = true;
+        kotak.hidden = false;
+      };
+      img.src = 'img/' + spriteId + '.png';
+      fig.append(img);
+    } else {
+      kotak.hidden = false;
+    }
+    fig.append(kotak);
+    const cap = document.createElement('figcaption');
+    cap.textContent = nama;
+    fig.append(cap);
+    wrap.append(fig);
+  }
+  return wrap;
+}
+
+// "dua batang paparan, satu tumbuh sedikit, satu tumbuh lebih banyak" —
+// meniru HUD: label penuh sekali di atas, nama tokoh di tiap batang, garis
+// batas aman. Tinggi batang ilustratif, tanpa menuliskan angka jawaban.
+function ilusBatang() {
+  const wrap = document.createElement('div');
+  wrap.className = 'ilus-batang';
+
+  const judul = document.createElement('div');
+  judul.className = 'ilus-batang-judul';
+  judul.textContent = content.label.paparan_penuh;
+  wrap.append(judul);
+
+  const ambangPersen =
+    (content.konstanta.ambang_aman / 15) * 100; // skala sama dengan HUD (MAKS 15)
+  const baris = [
+    [NAMA.cho, 22],
+    [NAMA.ones, 68],
+  ];
+  for (const [nama, persen] of baris) {
+    const row = document.createElement('div');
+    row.className = 'ilus-batang-baris';
+    const lab = document.createElement('span');
+    lab.className = 'ilus-batang-nama';
+    lab.textContent = nama;
+    const track = document.createElement('span');
+    track.className = 'ilus-batang-track';
+    const fill = document.createElement('span');
+    fill.className = 'ilus-batang-fill';
+    fill.style.width = persen + '%';
+    const tanda = document.createElement('span');
+    tanda.className = 'ilus-batang-ambang';
+    tanda.style.left = ambangPersen.toFixed(1) + '%';
+    track.append(fill, tanda);
+    row.append(lab, track);
+    wrap.append(row);
+  }
+
+  const cap = document.createElement('p');
+  cap.className = 'ilus-batang-cap';
+  cap.textContent =
+    'Garis tegak: batas aman ' + fmt1(content.konstanta.ambang_aman) + ' poin';
+  wrap.append(cap);
+  return wrap;
+}
+
+// "jam dan sebuah pilihan bertanda +N menit" — jam menunjuk waktu absen,
+// plus satu tombol pilihan contoh dengan biaya menit yang dibaca dari
+// deskripsi gambar kartu.
+function ilusJam(k) {
+  const wrap = document.createElement('div');
+  wrap.className = 'ilus-jam';
+
+  const absen = (content.konstanta && content.konstanta.jam_absen) || '07.30';
+  const [jamStr, menitStr] = absen.split('.');
+  const jam = Number(jamStr) || 0;
+  const menit = Number(menitStr) || 0;
+  const sudutJam = ((jam % 12) + menit / 60) * 30;
+  const sudutMenit = menit * 6;
+
+  const svgNS = 'http://www.w3.org/2000/svg';
+  const svg = document.createElementNS(svgNS, 'svg');
+  svg.setAttribute('viewBox', '0 0 100 100');
+  svg.setAttribute('class', 'ilus-jam-muka');
+  const lingkar = document.createElementNS(svgNS, 'circle');
+  lingkar.setAttribute('cx', '50');
+  lingkar.setAttribute('cy', '50');
+  lingkar.setAttribute('r', '44');
+  lingkar.setAttribute('class', 'ilus-jam-lingkar');
+  svg.append(lingkar);
+  for (let i = 0; i < 12; i += 1) {
+    const t = document.createElementNS(svgNS, 'line');
+    const a = (i * 30 * Math.PI) / 180;
+    t.setAttribute('x1', (50 + Math.sin(a) * 40).toFixed(1));
+    t.setAttribute('y1', (50 - Math.cos(a) * 40).toFixed(1));
+    t.setAttribute('x2', (50 + Math.sin(a) * 44).toFixed(1));
+    t.setAttribute('y2', (50 - Math.cos(a) * 44).toFixed(1));
+    t.setAttribute('class', 'ilus-jam-tik');
+    svg.append(t);
+  }
+  const buatJarum = (sudut, panjang, kelas) => {
+    const l = document.createElementNS(svgNS, 'line');
+    const a = (sudut * Math.PI) / 180;
+    l.setAttribute('x1', '50');
+    l.setAttribute('y1', '50');
+    l.setAttribute('x2', (50 + Math.sin(a) * panjang).toFixed(1));
+    l.setAttribute('y2', (50 - Math.cos(a) * panjang).toFixed(1));
+    l.setAttribute('class', kelas);
+    return l;
+  };
+  svg.append(buatJarum(sudutJam, 22, 'ilus-jam-jarum-jam'));
+  svg.append(buatJarum(sudutMenit, 32, 'ilus-jam-jarum-menit'));
+
+  const jamBlok = document.createElement('div');
+  jamBlok.className = 'ilus-jam-blok';
+  const jamCap = document.createElement('span');
+  jamCap.className = 'ilus-jam-cap';
+  jamCap.textContent = 'absen ' + absen;
+  jamBlok.append(svg, jamCap);
+
+  const contoh = document.createElement('div');
+  contoh.className = 'pilih pilih--contoh';
+  const chip = document.createElement('span');
+  chip.className = 'chip';
+  chip.textContent = '1';
+  const lab = document.createElement('span');
+  lab.className = 'pilih-label';
+  lab.textContent = 'Pilihan yang lebih hati-hati';
+  const m = document.createElement('span');
+  m.className = 'pilih-menit';
+  const cocokMenit = /\+\s*(\d+)\s*menit/i.exec(k && k.gambar ? k.gambar : '');
+  m.textContent = '+' + (cocokMenit ? cocokMenit[1] : '8') + ' menit';
+  contoh.append(chip, lab, m);
+
+  wrap.append(jamBlok, contoh);
+  return wrap;
 }
 
 function lanjutKartu() {
@@ -615,6 +793,7 @@ function renderMain() {
   }
 
   renderJam();
+  mungkinMulaiIntro();
 }
 
 // Tombol pilihan: chip nomor, label, dan (untuk keputusan biasa) biaya menit.
@@ -1412,6 +1591,10 @@ function ulang() {
   if (sesi.layar === 'judul') return;
   if (sesi.hitung.timer) clearTimeout(sesi.hitung.timer);
   resetSesi();
+  // R selalu memunculkan sorotan pengenalan lagi, walau sudah pernah dilihat.
+  sesi.introPaksa = true;
+  el('intro').hidden = true;
+  el('bantuan').hidden = true;
   for (const id of ['isi-cho', 'isi-ones']) {
     el(id).replaceChildren();
     delete el(id).dataset.terisi;
@@ -1428,6 +1611,211 @@ function ulang() {
   el('hasil-uji').textContent = '';
   el('salin-status').hidden = true;
   pergiKe('judul');
+}
+
+// --- sorotan pengenalan bertahap (lapis 5) ----------------------------------
+
+// Langkah sorotan: tiap langkah menyorot satu elemen yang sudah ada di layar
+// dan menempelkan kotak penjelasan. Angka & label diambil dari content.
+function introLangkahDaftar() {
+  const L = content.label.paparan_penuh;
+  const ambang = fmt1(content.konstanta.ambang_aman);
+  const absen = content.konstanta.jam_absen;
+  return [
+    {
+      target: () => document.querySelector('.panel-panel'),
+      teks:
+        'Dua panel berjalan berdampingan: ' + NAMA.cho + ' di kiri, ' +
+        NAMA.ones + ' di kanan. Kamu memegang keduanya bergantian. Panel yang ' +
+        'sedang menunggu giliran diredupkan, tetapi tidak pernah disembunyikan.',
+    },
+    {
+      target: () => el('hud'),
+      teks:
+        L + '. Dua batang ini naik setiap keputusan dan tidak pernah turun. ' +
+        'Garis tegak pada tiap batang menandai batas aman ' + ambang + ' poin.',
+    },
+    {
+      target: () => el('jam-cho'),
+      teks:
+        'Jam di pojok tiap panel berjalan sendiri-sendiri menuju waktu absen ' +
+        absen + ' di Gadog. Pilihan yang lebih hati-hati biasanya memakan ' +
+        'lebih banyak menit.',
+    },
+  ];
+}
+
+function siapkanIntro() {
+  el('intro-lanjut').addEventListener('click', introMaju);
+  el('intro-lewati').addEventListener('click', introSelesai);
+  el('intro-lewati').textContent = 'Lewati';
+  window.addEventListener('resize', () => {
+    if (sesi && sesi.introAktif) taruhSorotan();
+  });
+}
+
+// Gerbang: muncul di keputusan pertama, fase pilih, dan hanya sekali —
+// kecuali introPaksa (dipasang oleh R) memaksanya tampil lagi.
+function mungkinMulaiIntro() {
+  if (!sesi || sesi.layar !== 'main') return;
+  if (sesi.langkah !== 0 || sesi.fase !== 'pilih') return;
+  if (sesi.introDijalankan || sesi.introAktif) return;
+  if (!sesi.introPaksa && introDilihatTersimpan()) return;
+  sesi.introDijalankan = true;
+  sesi.introLangkah = 0;
+  requestAnimationFrame(() => mulaiIntro());
+}
+
+function mulaiIntro() {
+  if (!sesi || sesi.layar !== 'main') return;
+  sesi.introAktif = true;
+  el('intro').hidden = false;
+  renderSorotan();
+}
+
+function renderSorotan() {
+  const daftar = introLangkahDaftar();
+  const langkah = daftar[sesi.introLangkah];
+  if (!langkah) {
+    introSelesai();
+    return;
+  }
+  el('intro-langkah').textContent =
+    'Pengenalan ' + (sesi.introLangkah + 1) + ' dari ' + daftar.length;
+  el('intro-teks').textContent = langkah.teks;
+  el('intro-lanjut').textContent =
+    sesi.introLangkah === daftar.length - 1
+      ? 'Selesai'
+      : content.label.tombol.lanjut;
+  taruhSorotan();
+  fokus(el('intro-lanjut'));
+}
+
+function taruhSorotan() {
+  const daftar = introLangkahDaftar();
+  const langkah = daftar[sesi.introLangkah];
+  const node = langkah && langkah.target();
+  const cincin = el('intro-cincin');
+  const kotak = el('intro-kotak');
+  if (!node || typeof node.getBoundingClientRect !== 'function') {
+    cincin.hidden = true;
+    return;
+  }
+  const r = node.getBoundingClientRect();
+  const vw = window.innerWidth || 1024;
+  const vh = window.innerHeight || 768;
+  const pad = 8;
+  cincin.hidden = false;
+  cincin.style.left = Math.max(2, r.left - pad) + 'px';
+  cincin.style.top = Math.max(2, r.top - pad) + 'px';
+  cincin.style.width = Math.min(vw - 4, r.width + pad * 2) + 'px';
+  cincin.style.height = r.height + pad * 2 + 'px';
+
+  // Kotak penjelasan: coba di bawah sasaran, lalu di atas, lalu jepit ke
+  // dalam viewport supaya tidak pernah terpotong (mis. saat sasaran lebih
+  // tinggi dari layar, seperti kedua panel).
+  const lebarKotak = 340;
+  kotak.style.bottom = 'auto';
+  kotak.style.left =
+    Math.max(12, Math.min(r.left, vw - lebarKotak - 12)) + 'px';
+  const tinggiKotak = kotak.offsetHeight || 160;
+  const bawah = r.bottom + pad + 12;
+  const atas = r.top - pad - 12 - tinggiKotak;
+  let top;
+  if (bawah + tinggiKotak <= vh - 12) top = bawah;
+  else if (atas >= 12) top = atas;
+  else top = Math.max(12, vh - tinggiKotak - 12);
+  kotak.style.top = Math.round(top) + 'px';
+}
+
+function introMaju() {
+  if (!sesi.introAktif) return;
+  sesi.introLangkah += 1;
+  renderSorotan();
+}
+
+function introSelesai() {
+  if (!sesi) return;
+  sesi.introAktif = false;
+  el('intro').hidden = true;
+  tandaiIntroDilihat();
+  sesi.introPaksa = false;
+  const b = sesi.tombolPilihan && sesi.tombolPilihan[0];
+  if (b) fokus(b);
+}
+
+// --- layar bantuan (lapis 5) ----------------------------------------------
+
+function siapkanBantuan() {
+  el('bantuan-judul').textContent = content.label.tombol.bantuan;
+  el('bantuan-tutup').textContent = 'Tutup';
+  el('bantuan-tutup').addEventListener('click', tutupBantuan);
+
+  const P = content.antarmuka.pintasan;
+  const T = content.label.tombol;
+  const cara = [
+    NAMA.cho + ' berangkat naik mobil sendiri; ' + NAMA.ones + ' naik ojek, ' +
+      'Transjakarta, jalan kaki, lalu mobil rombongan. Kamu memilih untuk ' +
+      'keduanya, satu keputusan tiap giliran, di panel yang sedang aktif.',
+    'Setiap tombol pilihan menuliskan biaya waktunya. Biaya ' +
+      content.label.paparan_penuh + ' baru terlihat setelah kamu memilih, ' +
+      'lewat dua batang di atas panel. Batang itu tidak pernah turun.',
+    'Tujuannya sampai di Gadog sebelum absen ' + content.konstanta.jam_absen +
+      '. Setelah keduanya tiba, layar hitung menjumlahkan ulang seluruh ' +
+      'kemungkinan rute dan menutup dengan satu opsi terakhir.',
+    'Permainan tidak pernah maju sendiri: selalu tekan ' + T.lanjut +
+      '. Tekan ' + P.kenapa + ' untuk melihat catatan mesin di balik ' +
+      'sebuah keputusan.',
+  ];
+  const box = el('bantuan-caramain');
+  box.replaceChildren();
+  for (const t of cara) {
+    const p = document.createElement('p');
+    p.textContent = t;
+    box.append(p);
+  }
+
+  const baris = [
+    [P.pilihan, 'Ambil pilihan yang sesuai nomornya'],
+    [P.lanjut, T.lanjut],
+    [P.kenapa, T.kenapa + ' — catatan mesin keputusan ini'],
+    [P.bantuan, T.bantuan + ' — buka atau tutup layar ini'],
+    [P.bisu, T.suara + ' — bisukan atau hidupkan'],
+    [P.ulang, T.ulang + ' — kembali ke layar judul'],
+    [P.salin, T.salin + ' (di layar memo)'],
+    [P.tutup, 'Tutup catatan atau layar yang sedang terbuka'],
+  ];
+  const dl = el('bantuan-pintasan-daftar');
+  dl.replaceChildren();
+  for (const [tombol, arti] of baris) {
+    const dt = document.createElement('dt');
+    const kbd = document.createElement('kbd');
+    kbd.textContent = tombol;
+    dt.append(kbd);
+    const dd = document.createElement('dd');
+    dd.textContent = arti;
+    dl.append(dt, dd);
+  }
+}
+
+function bukaBantuan() {
+  if (!sesi || sesi.bantuanAktif) return;
+  sesi.bantuanAktif = true;
+  sesi._fokusSebelumBantuan =
+    document.activeElement && document.activeElement.focus
+      ? document.activeElement
+      : null;
+  el('bantuan').hidden = false;
+  fokus(el('bantuan-tutup'));
+}
+
+function tutupBantuan() {
+  if (!sesi || !sesi.bantuanAktif) return;
+  sesi.bantuanAktif = false;
+  el('bantuan').hidden = true;
+  const kembali = sesi._fokusSebelumBantuan;
+  sesi._fokusSebelumBantuan = null;
+  if (kembali && document.contains(kembali)) fokus(kembali);
 }
 
 // --- pintasan papan ketik --------------------------------------------------
@@ -1457,6 +1845,34 @@ function tekan(ev) {
   if (!sesi) return;
   const key = ev.key;
   const layar = sesi.layar;
+
+  // Layar bantuan menindih segalanya: hanya H atau Esc yang berlaku.
+  if (sesi.bantuanAktif) {
+    if (cocok(key, P.bantuan) || cocok(key, P.tutup)) {
+      ev.preventDefault();
+      tutupBantuan();
+    }
+    return;
+  }
+
+  // Sorotan pengenalan menindih permainan: Lanjut maju, Esc melewati.
+  if (sesi.introAktif) {
+    if (cocok(key, P.lanjut)) {
+      ev.preventDefault();
+      introMaju();
+    } else if (cocok(key, P.tutup)) {
+      ev.preventDefault();
+      introSelesai();
+    }
+    return;
+  }
+
+  // H membuka layar bantuan dari layar mana pun.
+  if (cocok(key, P.bantuan)) {
+    ev.preventDefault();
+    bukaBantuan();
+    return;
+  }
 
   if (cocok(key, P.lanjut)) {
     if (layar === 'kartu') {

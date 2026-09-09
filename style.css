@@ -848,6 +848,236 @@ p { margin: 0 0 0.75rem; }
   }
 }
 
+/* ---------- lapis 5: ilustrasi kartu pembuka ---------- */
+
+.pembuka-ilustrasi {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 168px;
+  margin: 0.2rem auto 1.2rem;
+}
+
+/* kartu 1: dua tokoh berdampingan */
+.ilus-tokoh {
+  display: flex;
+  gap: clamp(1.5rem, 5vw, 3rem);
+  align-items: flex-end;
+}
+.ilus-tokoh-fig {
+  margin: 0;
+  display: grid;
+  justify-items: center;
+  gap: 0.45rem;
+}
+.ilus-tokoh-fig img {
+  height: 140px;
+  width: auto;
+  image-rendering: pixelated;
+  filter: drop-shadow(2px 3px 3px color-mix(in srgb, #000 32%, transparent));
+}
+.ilus-kotak {
+  width: 74px;
+  height: 130px;
+  background: linear-gradient(180deg,
+    color-mix(in srgb, var(--jingga, #c4622d) 82%, black),
+    color-mix(in srgb, var(--jingga, #c4622d) 42%, black));
+  border: 1px solid #000;
+}
+.ilus-tokoh-fig figcaption {
+  font: 600 0.7rem/1 var(--mono);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: color-mix(in srgb, var(--ink) 74%, transparent);
+}
+
+/* kartu 2: dua batang Poin Paparan Abu Vulkanik */
+.ilus-batang {
+  width: min(420px, 100%);
+  display: grid;
+  gap: 0.5rem;
+  text-align: left;
+}
+.ilus-batang-judul {
+  font: 600 0.66rem/1.3 var(--mono);
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: color-mix(in srgb, var(--ink) 68%, transparent);
+}
+.ilus-batang-baris {
+  display: grid;
+  grid-template-columns: 5.5rem 1fr;
+  align-items: center;
+  gap: 0.6rem;
+}
+.ilus-batang-nama {
+  font: 600 0.72rem/1 var(--mono);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.ilus-batang-track {
+  position: relative;
+  height: 0.72rem;
+  border: 1px solid var(--line);
+  background: color-mix(in srgb, var(--ink) 10%, transparent);
+  overflow: hidden;
+}
+.ilus-batang-fill {
+  position: absolute;
+  left: 0; top: 0; bottom: 0;
+  background: linear-gradient(90deg,
+    color-mix(in srgb, var(--merah_dosis, #8e2f2f) 55%, var(--jingga, #c4622d)),
+    var(--merah_dosis, #8e2f2f));
+}
+.ilus-batang-ambang {
+  position: absolute;
+  top: -3px; bottom: -3px;
+  width: 2px;
+  background: var(--ink);
+}
+.ilus-batang-cap {
+  margin: 0.2rem 0 0;
+  font: 600 0.66rem/1.3 var(--mono);
+  letter-spacing: 0.04em;
+  color: color-mix(in srgb, var(--ink) 60%, transparent);
+}
+
+/* kartu 3: jam absen + satu pilihan contoh bertanda menit */
+.ilus-jam {
+  display: flex;
+  align-items: center;
+  gap: clamp(1rem, 4vw, 1.8rem);
+  flex-wrap: wrap;
+  justify-content: center;
+}
+.ilus-jam-blok {
+  display: grid;
+  justify-items: center;
+  gap: 0.35rem;
+}
+.ilus-jam-muka { width: 96px; height: 96px; }
+.ilus-jam-lingkar {
+  fill: var(--paper-2);
+  stroke: var(--ink);
+  stroke-width: 2;
+}
+.ilus-jam-tik {
+  stroke: color-mix(in srgb, var(--ink) 50%, transparent);
+  stroke-width: 2;
+}
+.ilus-jam-jarum-jam {
+  stroke: var(--ink);
+  stroke-width: 3.6;
+  stroke-linecap: round;
+}
+.ilus-jam-jarum-menit {
+  stroke: var(--jingga, #c4622d);
+  stroke-width: 2.6;
+  stroke-linecap: round;
+}
+.ilus-jam-cap {
+  font: 600 0.62rem/1 var(--mono);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: color-mix(in srgb, var(--jingga, #c4622d) 82%, black);
+}
+.pilih--contoh {
+  pointer-events: none;
+  max-width: 264px;
+  margin: 0;
+  cursor: default;
+}
+
+/* ---------- lapis 5: tindihan (sorotan pengenalan & bantuan) ---------- */
+
+.tindih {
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+}
+
+/* sorotan pengenalan bertahap */
+#intro { pointer-events: auto; }
+.intro-cincin {
+  position: fixed;
+  pointer-events: none;
+  border: 2px solid var(--jingga, #c4622d);
+  border-radius: 2px;
+  box-shadow: 0 0 0 100vmax color-mix(in srgb, #0b0c0f 72%, transparent),
+    0 0 22px 3px color-mix(in srgb, var(--jingga, #c4622d) 55%, transparent);
+  transition: left 0.18s ease, top 0.18s ease, width 0.18s ease,
+    height 0.18s ease;
+}
+.intro-kotak {
+  position: fixed;
+  width: 340px;
+  max-width: calc(100vw - 24px);
+  pointer-events: auto;
+  background: var(--paper);
+  color: var(--ink);
+  border: 1px solid var(--ink);
+  box-shadow: var(--shadow-2);
+  padding: 1rem 1.1rem 0.9rem;
+  text-align: left;
+}
+.intro-kotak p { margin: 0 0 0.6rem; }
+.intro-kotak #intro-teks { font-size: 0.92rem; line-height: 1.5; }
+.intro-aksi {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+}
+
+/* layar bantuan */
+#bantuan {
+  z-index: 85;
+  display: grid;
+  place-items: center;
+  padding: clamp(1rem, 4vh, 3rem);
+  background: color-mix(in srgb, #0b0c0f 78%, transparent);
+  overflow-y: auto;
+}
+.bantuan-panel {
+  width: 100%;
+  max-width: 580px;
+  max-height: 88vh;
+  overflow-y: auto;
+  background: var(--paper);
+  color: var(--ink);
+  border: 1px solid var(--line);
+  box-shadow: var(--shadow-2);
+  padding: clamp(1.4rem, 1rem + 2vw, 2.4rem);
+  text-align: left;
+}
+.bantuan-panel h2 {
+  padding-bottom: 0.5rem;
+  border-bottom: 2px solid var(--ink);
+}
+#bantuan-caramain p { max-width: 62ch; font-size: 0.95rem; }
+.pintasan-daftar {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 0.5rem 1rem;
+  margin: 0.6rem 0 1.4rem;
+}
+.pintasan-daftar dt { margin: 0; }
+.pintasan-daftar dd {
+  margin: 0;
+  align-self: center;
+  font-size: 0.9rem;
+}
+.pintasan-daftar kbd {
+  display: inline-block;
+  min-width: 1.4rem;
+  padding: 0.2rem 0.45rem;
+  border: 1px solid color-mix(in srgb, var(--ink) 55%, transparent);
+  border-bottom-width: 2px;
+  background: var(--paper-2);
+  font: 600 0.78rem/1 var(--mono);
+  text-align: center;
+  color: var(--ink);
+}
+
 /* ---------- responsif ---------- */
 
 @media (max-width: 1023px) {

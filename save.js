@@ -45,6 +45,16 @@ export function simpanLencana(ids) {
   return new Set(data.lencana);
 }
 
+export function introDilihatTersimpan() {
+  return baca().intro === true;
+}
+
+export function tandaiIntroDilihat() {
+  const data = baca();
+  data.intro = true;
+  tulis(data);
+}
+
 export function jumlahTamat() {
   return Number(baca().tamat || 0);
 }
