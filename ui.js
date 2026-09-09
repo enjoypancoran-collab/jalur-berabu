@@ -27,8 +27,6 @@ import {
   simpanLencana,
   tambahTamat,
   jumlahTamat,
-  introDilihatTersimpan,
-  tandaiIntroDilihat,
   papanSkorTersimpan,
   perbaruiPapanSkor,
   simpanKemajuan,
@@ -433,9 +431,7 @@ function resetSesi() {
     tamatDicatat: false,
     hitung: { antrean: [], idx: 0, selesai: false, timer: null },
     kartuTerbuka: new Set(),
-    // sorotan pengenalan (lapis 5). introPaksa dipasang oleh R agar sorotan
-    // muncul lagi walau sudah pernah dilihat; selain itu gerbangnya localStorage.
-    introPaksa: false,
+    // sorotan pengenalan (lapis 5): tampil di keputusan pertama tiap pagi baru.
     introDijalankan: false,
     introAktif: false,
     introLangkah: 0,
@@ -1961,8 +1957,6 @@ function ulang() {
   hentikanKlip();
   hapusKemajuan(); // Mulai ulang membuang pagi yang sedang berjalan
   resetSesi();
-  // R selalu memunculkan sorotan pengenalan lagi, walau sudah pernah dilihat.
-  sesi.introPaksa = true;
   el('intro').hidden = true;
   el('bantuan').hidden = true;
   for (const id of ['isi-cho', 'isi-ones']) {
@@ -2024,13 +2018,13 @@ function siapkanIntro() {
   });
 }
 
-// Gerbang: muncul di keputusan pertama, fase pilih, dan hanya sekali —
-// kecuali introPaksa (dipasang oleh R) memaksanya tampil lagi.
+// Gerbang: sorotan pengenalan muncul di keputusan pertama tiap pagi (sekali
+// per sesi), sebelum pemain mengambil pilihan pertamanya. Tidak muncul saat
+// "Lanjutkan pagi" karena di sana introDijalankan sudah dipasang true.
 function mungkinMulaiIntro() {
   if (!sesi || sesi.layar !== 'main') return;
   if (sesi.langkah !== 0 || sesi.fase !== 'pilih') return;
   if (sesi.introDijalankan || sesi.introAktif) return;
-  if (!sesi.introPaksa && introDilihatTersimpan()) return;
   sesi.introDijalankan = true;
   sesi.introLangkah = 0;
   requestAnimationFrame(() => mulaiIntro());
@@ -2108,8 +2102,6 @@ function introSelesai() {
   if (!sesi) return;
   sesi.introAktif = false;
   el('intro').hidden = true;
-  tandaiIntroDilihat();
-  sesi.introPaksa = false;
   const b = sesi.tombolPilihan && sesi.tombolPilihan[0];
   if (b) fokus(b);
 }

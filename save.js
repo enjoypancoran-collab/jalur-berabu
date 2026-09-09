@@ -1,6 +1,5 @@
 // save.js
 // Penyimpanan localStorage. Lapis 3: kartu fakta terkumpul dan jumlah tamat.
-// Lapis 5: flag sorotan pengenalan sudah dilihat.
 // Lapis 6: pilihan bisu, papan skor tiga metrik, dan kemajuan tertunda
 //          (kembali lewat tombol "Lanjutkan pagi" di layar judul).
 // Setiap akses dibungkus try/catch - mode privat atau storage yang diblokir
@@ -46,16 +45,6 @@ export function simpanLencana(ids) {
   data.lencana = [...gabung];
   tulis(data);
   return new Set(data.lencana);
-}
-
-export function introDilihatTersimpan() {
-  return baca().intro === true;
-}
-
-export function tandaiIntroDilihat() {
-  const data = baca();
-  data.intro = true;
-  tulis(data);
 }
 
 export function jumlahTamat() {
