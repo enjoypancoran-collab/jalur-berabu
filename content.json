@@ -129,8 +129,8 @@
       "o3-fullface",
       "o4-dinding",
       "o5-tengah",
-      "o6-lurus",
-      "o7-tutup"
+      "o7-tutup",
+      "o8-luar"
     ],
     "barang_optimal_ones": [
       "kn95",
@@ -858,111 +858,38 @@
       ]
     },
     {
-      "id": "O6",
-      "tokoh": "ones",
-      "jam": "06.20",
-      "urutan": 6,
-      "latar": "bg_ones_jpo.png",
-      "tokoh_aset": "otomatis",
-      "kalimat_situasi": "Dari Halte Cawang UKI ke titik kumpul rombongan cuma ada satu jalur, yaitu jembatan penyeberangan. Sekitar lima belas menit jalan kaki, lalu menunggu sampai mobilnya datang.",
-      "pilihan": [
-        {
-          "id": "o6-lurus",
-          "label": "Susuri JPO tanpa berhenti, tunggu di bawah atap tangga sambil mengirim titik lokasi",
-          "biaya_menit": 19,
-          "segmen": [
-            {
-              "menit": 15,
-              "laju": "jpo_beratap",
-              "luar_ruangan": true
-            },
-            {
-              "menit": 4,
-              "laju": "halte_berdinding",
-              "luar_ruangan": true
-            }
-          ],
-          "pp_tetap": 0.0,
-          "kalimat_akibat": "Si Ones menyusuri jembatan sampai ujung tanpa berhenti, lalu berdiri di bawah atap tangga sambil mengirim titik lokasinya. Empat menit kemudian mobilnya datang."
-        },
-        {
-          "id": "o6-tepijalan",
-          "label": "Susuri JPO, lalu turun menunggu di tepi jalan",
-          "biaya_menit": 19,
-          "segmen": [
-            {
-              "menit": 15,
-              "laju": "jpo_beratap",
-              "luar_ruangan": true
-            },
-            {
-              "menit": 4,
-              "laju": "halte_dekat_jalur",
-              "luar_ruangan": true
-            }
-          ],
-          "pp_tetap": 0.0,
-          "kalimat_akibat": "Si Ones turun sampai ke bahu jalan supaya mobilnya tidak perlu berhenti terlalu lama. Setiap kendaraan yang lewat meniupkan angin berdebu ke arahnya.",
-          "kartu_fakta": 12
-        },
-        {
-          "id": "o6-sarapan",
-          "label": "Berhenti beli sarapan di lapak tengah jembatan",
-          "biaya_menit": 22,
-          "segmen": [
-            {
-              "menit": 13,
-              "laju": "jpo_beratap",
-              "luar_ruangan": true
-            },
-            {
-              "menit": 5,
-              "laju": "jpo_beratap",
-              "luar_ruangan": true,
-              "faktor_masker_paksa": 1.0
-            },
-            {
-              "menit": 4,
-              "laju": "halte_berdinding",
-              "luar_ruangan": true
-            }
-          ],
-          "pp_tetap": 0.0,
-          "kalimat_akibat": "Si Ones berhenti di lapak pedagang yang mangkal di tengah jembatan. Maskernya turun ke dagu selama beberapa menit sambil dia makan sambil berjalan.",
-          "kartu_fakta": 2
-        }
-      ]
-    },
-    {
       "id": "O7",
       "tokoh": "ones",
       "jam": "06.39",
-      "urutan": 7,
+      "urutan": 6,
       "latar": "bg_ones_carpool.png",
       "tokoh_aset": "otomatis",
-      "kalimat_situasi": "Mobil rombongan masih empat puluh dua menit lagi sampai Gadog.",
-      "catatan_mesin": "Segmen 3 menit dari parkiran ke pintu gedung dibebankan di sini, karena tidak ada keputusan terpisah untuknya.",
+      "kalimat_situasi": "Dari Halte Cawang UKI, Si Ones menyusuri jembatan penyeberangan lima belas menit ke titik jemput, lalu menunggu di ujung tangga. Mobil rombongan masih empat puluh dua menit lagi sampai Gadog.",
+      "catatan_mesin": "Lima belas menit menyusuri JPO dan empat menit menunggu di ujung tangga dibebankan di sini. Segmen 3 menit dari parkiran ke pintu gedung pindah ke keputusan terakhir Si Ones.",
       "pilihan": [
         {
           "id": "o7-tutup",
           "label": "Minta jendela ditutup dan AC di-recirculate, masker dilepas dan disimpan di kantong plastik",
-          "biaya_menit": 45,
+          "biaya_menit": 61,
           "segmen": [
+            {
+              "menit": 15,
+              "laju": "jpo_beratap",
+              "luar_ruangan": true
+            },
+            {
+              "menit": 4,
+              "laju": "halte_berdinding",
+              "luar_ruangan": true
+            },
             {
               "menit": 42,
               "laju": "mobil_recirculate",
               "luar_ruangan": false
-            },
-            {
-              "menit": 3,
-              "laju": "trotoar",
-              "luar_ruangan": true,
-              "hitung_menit_terbuka": false,
-              "catatan": "Berjalan dari parkiran ke pintu gedung Gadog. Tetap menambah paparan, tapi tidak dihitung sebagai menit rantai perjalanan karena sudah berada di lingkungan kantor."
             }
           ],
           "pp_tetap": 0.0,
-          "kalimat_akibat": "Si Ones melepas maskernya dan memasukkannya ke kantong plastik sebelum menutup ransel. AC hanya memutar udara yang ada di dalam ruang mobil.",
+          "kalimat_akibat": "Si Ones menyusuri jembatan sampai ujung tanpa berhenti, lalu naik ke mobil. Ia melepas maskernya dan memasukkannya ke kantong plastik sebelum menutup ransel. AC hanya memutar udara yang ada di dalam ruang mobil.",
           "efek": {
             "tanpa_kantong_plastik": {
               "pp_tetap": 1.6,
@@ -974,35 +901,72 @@
         {
           "id": "o7-jendela",
           "label": "Lepas masker dan buka jendela karena sudah di dalam mobil",
-          "biaya_menit": 45,
+          "biaya_menit": 61,
           "segmen": [
+            {
+              "menit": 15,
+              "laju": "jpo_beratap",
+              "luar_ruangan": true
+            },
+            {
+              "menit": 4,
+              "laju": "halte_berdinding",
+              "luar_ruangan": true
+            },
             {
               "menit": 42,
               "laju": "mobil_jendela_terbuka",
               "luar_ruangan": false
-            },
-            {
-              "menit": 3,
-              "laju": "trotoar",
-              "luar_ruangan": true,
-              "hitung_menit_terbuka": false,
-              "catatan": "Berjalan dari parkiran ke pintu gedung Gadog. Tetap menambah paparan, tapi tidak dihitung sebagai menit rantai perjalanan karena sudah berada di lingkungan kantor."
             }
           ],
           "pp_tetap": 0.0,
-          "kalimat_akibat": "Jendela dibuka padahal perjalanan masih panjang. Kabin yang tadinya bersih perlahan ikut dipenuhi debu.",
+          "kalimat_akibat": "Si Ones menyusuri jembatan sampai ujung, lalu naik ke mobil dan membuka jendela padahal perjalanan masih panjang. Kabin yang tadinya bersih perlahan ikut dipenuhi debu.",
           "kartu_fakta": 4
         },
         {
           "id": "o7-tetap",
           "label": "Tetap pakai masker sepanjang perjalanan",
-          "biaya_menit": 45,
+          "biaya_menit": 61,
           "segmen": [
+            {
+              "menit": 15,
+              "laju": "jpo_beratap",
+              "luar_ruangan": true
+            },
+            {
+              "menit": 4,
+              "laju": "halte_berdinding",
+              "luar_ruangan": true
+            },
             {
               "menit": 42,
               "laju": "mobil_recirculate",
               "luar_ruangan": false
-            },
+            }
+          ],
+          "pp_tetap": 0.0,
+          "kalimat_akibat": "Si Ones menyusuri jembatan sampai ujung, lalu naik ke mobil dan membiarkan maskernya tetap terpasang sampai turun di Gadog. Rasanya tidak nyaman, tetapi maskernya tetap terpasang.",
+          "efek": {
+            "kantong_plastik_tidak_terpakai": true
+          }
+        }
+      ]
+    },
+    {
+      "id": "O8",
+      "tokoh": "ones",
+      "jam": "07.21",
+      "urutan": 7,
+      "latar": "bg_ones_carpool.png",
+      "tokoh_aset": "otomatis",
+      "kalimat_situasi": "Mobil rombongan berhenti di Gadog. Tinggal beberapa langkah ke pintu gedung.",
+      "catatan_mesin": "Segmen 3 menit dari parkiran ke pintu gedung dibebankan di sini. Paparannya tetap dihitung, tapi menitnya tidak masuk hitungan menit udara terbuka karena sudah berada di lingkungan kantor.",
+      "pilihan": [
+        {
+          "id": "o8-luar",
+          "label": "Lepas masker di luar gedung, cuci tangan dan muka di wastafel dekat lobi",
+          "biaya_menit": 3,
+          "segmen": [
             {
               "menit": 3,
               "laju": "trotoar",
@@ -1012,10 +976,47 @@
             }
           ],
           "pp_tetap": 0.0,
-          "kalimat_akibat": "Si Ones membiarkan maskernya tetap terpasang sampai turun di Gadog. Rasanya tidak nyaman, tetapi maskernya tetap terpasang.",
+          "kalimat_akibat": "Si Ones melepas maskernya di bawah kanopi, lalu mencuci tangan dan muka sebelum masuk ke ruangan. Yang dibawanya ke dalam hanyalah ranselnya.",
           "efek": {
-            "kantong_plastik_tidak_terpakai": true
+            "rantai_paparan_terputus": true
           }
+        },
+        {
+          "id": "o8-dalam",
+          "label": "Masuk ke ruangan dulu baru lepas masker",
+          "biaya_menit": 3,
+          "segmen": [
+            {
+              "menit": 3,
+              "laju": "trotoar",
+              "luar_ruangan": true,
+              "hitung_menit_terbuka": false,
+              "catatan": "Berjalan dari parkiran ke pintu gedung Gadog. Tetap menambah paparan, tapi tidak dihitung sebagai menit rantai perjalanan karena sudah berada di lingkungan kantor."
+            }
+          ],
+          "pp_tetap": 1.0,
+          "kalimat_akibat": "Si Ones melepas masker di meja kerja dengan sisi luarnya menghadap ke atas. Debu halus yang menempel di permukaannya ikut terbang di dalam ruangan.",
+          "kartu_fakta": 12
+        },
+        {
+          "id": "o8-meja",
+          "label": "Langsung ke meja",
+          "biaya_menit": 3,
+          "segmen": [
+            {
+              "menit": 3,
+              "laju": "trotoar",
+              "luar_ruangan": true,
+              "hitung_menit_terbuka": false,
+              "catatan": "Berjalan dari parkiran ke pintu gedung Gadog. Tetap menambah paparan, tapi tidak dihitung sebagai menit rantai perjalanan karena sudah berada di lingkungan kantor."
+            }
+          ],
+          "pp_tetap": 2.0,
+          "kalimat_akibat": "Si Ones langsung duduk di meja kerjanya tanpa singgah ke mana-mana. Abu menyebar ke sekitarnya, sampai rekan kerja di sebelahnya harus mengelap meja dari abu vulkanik yang terbawa.",
+          "efek": {
+            "epilog_keluhan_rekan": true
+          },
+          "kartu_fakta": 12
         }
       ]
     }
@@ -1028,8 +1029,7 @@
       "tokoh": "ones",
       "pemicu": "goggle tidak dibawa di O2, atau lensa kontak dibawa",
       "muncul_di": [
-        "O3",
-        "O6"
+        "O3"
       ],
       "batas_waktu_detik": 5,
       "kartu_fakta": 10,
@@ -1222,7 +1222,7 @@
     },
     "kartu_pembuka": [
       {
-        "teks": "Senin pagi. Abu Anak Krakatau sudah turun sejak akhir pekan, dan kantor belum mengeluarkan kebijakan apa pun. Kamu memegang dua orang sekaligus: Bro Cho dan Si Ones.",
+        "teks": "Senin pagi. Abu Anak Krakatau sudah turun sejak akhir pekan, dan kantor belum mengeluarkan kebijakan apa pun. Kamu memegang dua orang sekaligus:\nBro Cho dan Si Ones.",
         "gambar": "dua tokoh berdampingan",
         "suara": [
           "brief.cho",
@@ -1230,7 +1230,7 @@
         ]
       },
       {
-        "teks": "Setiap pilihan yang kamu ambil dalam perjalanan Si Ones dan Bro Cho akan menambah Poin Paparan Abu Vulkanik terhadap mereka. Poin Paparan Abu Vulkanik ini tidak dapat turun angkanya, tapi dapat kamu minimalisasi dengan pilihan yang tepat.",
+        "teks": "Setiap pilihan yang kamu ambil dalam perjalanan Si Ones dan Bro Cho akan memengaruhi Poin Paparan Abu Vulkanik terhadap mereka. Poin Paparan Abu Vulkanik ini tidak dapat turun angkanya, tapi dapat kamu minimalisasi dengan pilihan yang tepat.",
         "gambar": "dua batang paparan, satu tumbuh sedikit, satu tumbuh lebih banyak"
       },
       {
@@ -1437,7 +1437,12 @@
           "o4-buspertama": { "latar": "bg_busway_penuh.png" }
         }
       },
-      "C5": { "sprite": false },
+      "C5": {
+        "sprite": false,
+        "pilihan": {
+          "c5-beri": { "latar": "bg_cho_spbu_masker.png" }
+        }
+      },
       "O5": {
         "pilihan": {
           "o5-tengah": { "sprite_posisi": "tengah" },
@@ -1458,11 +1463,23 @@
           "c7-meja": { "latar": "bg_teman_kesal.png" }
         }
       },
-      "O7": { "sprite": false }
+      "O7": { "sprite": false },
+      "O8": {
+        "pilihan": {
+          "o8-luar": { "latar": "bg_ruang_kantor.png" },
+          "o8-dalam": { "latar": "bg_ruang_kantor.png" },
+          "o8-meja": { "latar": "bg_teman_kesal.png" }
+        }
+      }
     },
     "kejadian": {
       "mata": { "sprite": false },
-      "atap": { "sprite": false }
+      "atap": {
+        "sprite": false,
+        "pilihan": {
+          "atap-sekarang": { "latar": "event_atap_tergelincir.png" }
+        }
+      }
     }
   }
 }

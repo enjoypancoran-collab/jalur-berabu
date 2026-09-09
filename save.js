@@ -33,6 +33,18 @@ export function simpanKartuTerbuka(ids) {
   return new Set(data.kartu);
 }
 
+export function lencanaTersimpan() {
+  return new Set(baca().lencana || []);
+}
+
+export function simpanLencana(ids) {
+  const data = baca();
+  const gabung = new Set([...(data.lencana || []), ...ids]);
+  data.lencana = [...gabung];
+  tulis(data);
+  return new Set(data.lencana);
+}
+
 export function jumlahTamat() {
   return Number(baca().tamat || 0);
 }

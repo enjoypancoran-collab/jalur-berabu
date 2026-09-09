@@ -439,6 +439,44 @@ p { margin: 0 0 0.75rem; }
 #scene-cho .scene-bayangan { left: 2%; }
 #scene-ones .scene-bayangan { right: 2%; }
 
+/* jam berjalan tiap tokoh: pojok kanan atas scene, supaya pemain membaca
+   urgensi waktu masing-masing tokoh terhadap jam absen. */
+.scene-jam {
+  position: absolute;
+  z-index: 4;
+  top: 0;
+  right: 0;
+  display: grid;
+  justify-items: end;
+  gap: 0.08rem;
+  padding: 0.32rem 0.55rem 0.42rem;
+  text-align: right;
+  color: color-mix(in srgb, var(--abu, #e6e0d4) 94%, white);
+  background: color-mix(in srgb, var(--aspal, #16181c) 88%, transparent);
+  border-left: 1px solid color-mix(in srgb, var(--aspal, #000) 45%, transparent);
+  border-bottom: 2px solid color-mix(in srgb, var(--jingga, #c4622d) 72%, transparent);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+}
+.scene-jam-kicker {
+  font: 600 0.52rem/1 var(--mono);
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+  color: color-mix(in srgb, var(--abu, #e6e0d4) 58%, transparent);
+}
+.scene-jam-waktu {
+  font: 700 1.4rem/1 var(--mono);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.02em;
+  text-shadow: 0 1px 3px #000;
+}
+.scene-jam-absen {
+  font: 600 0.56rem/1.2 var(--mono);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: color-mix(in srgb, var(--jingga, #c4622d) 88%, white);
+}
+
 .panel-sprite {
   position: absolute;
   bottom: -3%;
@@ -644,6 +682,8 @@ p { margin: 0 0 0.75rem; }
   line-height: 1.5;
   max-width: 46ch;
   margin: 0 auto 1.2rem;
+  /* content.json boleh menyisipkan baris baru sebagai \n; hormati itu */
+  white-space: pre-line;
 }
 .pembuka-kartu .btn, .judul-kartu .btn { margin-top: 0.6rem; }
 
@@ -689,6 +729,64 @@ p { margin: 0 0 0.75rem; }
 #memo-isi ol { padding-left: 1.3rem; }
 #memo-isi li { margin: 0.35rem 0; }
 #memo-isi p { max-width: 64ch; }
+
+/* ---------- lencana (memo & koleksi) ---------- */
+
+.lencana-blok { margin: 1.2rem 0 0.4rem; }
+.lencana-blok h3 { margin-top: 0; }
+.lencana-baris {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.7rem;
+  margin: 0.5rem 0 0.3rem;
+}
+.lencana-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.4rem 0.6rem 0.4rem 0.4rem;
+  border: 1px solid var(--line);
+  background: var(--paper-2);
+  max-width: 15rem;
+}
+.lencana-item.terkunci {
+  border-style: dashed;
+  background: transparent;
+  opacity: 0.5;
+}
+.lencana-item.kelam {
+  border-color: color-mix(in srgb, var(--merah_dosis, #8e2f2f) 55%, var(--line));
+}
+.lencana-ikon {
+  flex: none;
+  width: 2.4rem;
+  height: 2.4rem;
+  object-fit: contain;
+  image-rendering: pixelated;
+}
+.lencana-kotak {
+  flex: none;
+  width: 2.4rem;
+  height: 2.4rem;
+  background: linear-gradient(180deg,
+    color-mix(in srgb, var(--jingga, #c4622d) 78%, black),
+    color-mix(in srgb, var(--jingga, #c4622d) 42%, black));
+  border: 1px solid #000;
+}
+.lencana-teks { display: grid; gap: 0.05rem; }
+.lencana-nama {
+  font: 700 0.8rem/1.2 var(--sans);
+}
+.lencana-nada {
+  font: 600 0.62rem/1.2 var(--mono);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: color-mix(in srgb, var(--ink) 58%, transparent);
+}
+.lencana-kosong {
+  font-size: 0.86em;
+  color: color-mix(in srgb, var(--ink) 60%, transparent);
+}
 
 /* ---------- koleksi ---------- */
 

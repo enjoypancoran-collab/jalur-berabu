@@ -338,3 +338,66 @@ export function kartuFaktaTerbuka(content, data) {
 
   return ids;
 }
+
+/**
+ * Kumpulan id lencana yang diperoleh dari keadaan sesi. Syarat ditelusuri dari
+ * content (efek.lencana pada pilihan, laju segmen, efek.kaca_tergores); tidak
+ * ada angka atau kalimat content.json yang disalin ke sini.
+ *
+ * @param data { pilihanCho, pilihanOnes, barang, selesai, ruteWfh }
+ * @returns Set<string> id lencana, hanya yang terdaftar di content.lencana
+ */
+export function lencanaDiperoleh(content, data) {
+  const punya = new Set();
+  const barang = data.barang || [];
+  const selesai = !!data.selesai;
+
+  const peta = new Map();
+  for (const k of content.keputusan) {
+    for (const p of k.pilihan || []) peta.set(p.id, { k, p });
+  }
+  const dipilih = [...(data.pilihanCho || []), ...(data.pilihanOnes || [])]
+    .map((id) => peta.get(id))
+    .filter(Boolean);
+
+  const lajuSet = (tokoh) => {
+    const s = new Set();
+    for (const { k, p } of dipilih) {
+      if (tokoh && k.tokoh !== tokoh) continue;
+      for (const seg of p.segmen || []) s.add(seg.laju);
+    }
+    return s;
+  };
+  const semuaLaju = lajuSet(null);
+  const lajuCho = lajuSet('cho');
+  const lajuOnes = lajuSet('ones');
+
+  // Solidaritas Kabin: pilihan dengan efek.lencana, atau masker kain cadangan.
+  for (const { p } of dipilih) {
+    if (p.efek && p.efek.lencana) punya.add(p.efek.lencana);
+  }
+  if (barang.includes('masker_kain')) punya.add('solidaritas_kabin');
+
+  // Kabin Rapat: kedua tokoh memilih laju recirculate dan tidak ada segmen
+  // udara luar / jendela terbuka di seluruh perjalanan.
+  const jendelaTerbuka =
+    semuaLaju.has('mobil_jendela_terbuka') || semuaLaju.has('mobil_udara_luar');
+  const recirculateKedua =
+    lajuCho.has('mobil_recirculate') && lajuOnes.has('mobil_recirculate');
+  if (selesai && recirculateKedua && !jendelaTerbuka) punya.add('kabin_rapat');
+
+  // Kaca Mulus: tidak ada pilihan yang menggores kaca (wiper pada abu kering).
+  const kacaTergores = dipilih.some(
+    ({ p }) => p.efek && p.efek.kaca_tergores === true,
+  );
+  if (selesai && !kacaTergores) punya.add('kaca_mulus');
+
+  // Tangan Kosong: menamatkan pagi tanpa KN95 (lencana kelam, bukan pujian).
+  if (selesai && !barang.includes('kn95')) punya.add('tangan_kosong');
+
+  // Pagi Nol: hanya lewat rute bekerja dari rumah yang terkunci.
+  if (data.ruteWfh) punya.add('pagi_nol');
+
+  const sah = new Set((content.lencana || []).map((l) => l.id));
+  return new Set([...punya].filter((id) => sah.has(id)));
+}

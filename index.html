@@ -29,10 +29,10 @@
           <button type="button" id="tombol-mulai" class="btn btn--utama"></button>
           <button type="button" id="tombol-koleksi-judul" class="btn btn--hantu"></button>
         </div>
-        <p class="judul-alat">
+        <p class="judul-alat" hidden>
           <button type="button" id="tombol-uji" class="btn btn--kecil">Uji angka acuan</button>
         </p>
-        <pre id="hasil-uji" class="mono"></pre>
+        <pre id="hasil-uji" class="mono" hidden></pre>
       </div>
     </section>
 
@@ -53,6 +53,11 @@
       <div class="panel-panel">
         <div class="panel" id="panel-cho">
           <div class="panel-scene" id="scene-cho">
+            <div class="scene-jam" id="jam-cho" hidden>
+              <span class="scene-jam-kicker">Pukul</span>
+              <span class="scene-jam-waktu" id="jam-cho-waktu"></span>
+              <span class="scene-jam-absen" id="jam-cho-absen"></span>
+            </div>
             <div class="scene-bayangan"></div>
             <div class="sprite-kotak" id="spritebox-cho" hidden></div>
             <img class="panel-sprite pos-kiri" id="sprite-cho" alt="" hidden>
@@ -64,6 +69,11 @@
         </div>
         <div class="panel" id="panel-ones">
           <div class="panel-scene" id="scene-ones">
+            <div class="scene-jam" id="jam-ones" hidden>
+              <span class="scene-jam-kicker">Pukul</span>
+              <span class="scene-jam-waktu" id="jam-ones-waktu"></span>
+              <span class="scene-jam-absen" id="jam-ones-absen"></span>
+            </div>
             <div class="scene-bayangan"></div>
             <div class="barang-meja" id="barang-meja-ones" hidden></div>
             <div class="sprite-kotak" id="spritebox-ones" hidden></div>
@@ -104,6 +114,7 @@
         <h2>Memo</h2>
         <div id="memo-isi"></div>
         <p id="memo-kartu-hitung" class="caption"></p>
+        <div id="memo-lencana" class="lencana-blok"></div>
         <div class="memo-aksi">
           <button type="button" id="tombol-salin" class="btn btn--utama"></button>
           <button type="button" id="tombol-koleksi-memo" class="btn btn--hantu"></button>
@@ -119,6 +130,7 @@
         <p id="koleksi-hitung" class="kicker"></p>
         <div class="koleksi-bar"><span id="koleksi-bar-isi"></span></div>
         <div id="koleksi-daftar"></div>
+        <div id="koleksi-lencana" class="lencana-blok"></div>
         <button type="button" id="tombol-koleksi-kembali" class="btn btn--hantu">Kembali</button>
       </div>
     </section>

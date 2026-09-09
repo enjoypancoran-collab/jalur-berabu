@@ -16,12 +16,15 @@ import {
   undiFaktorAngin,
   bulatkanSatuDesimal,
   kartuFaktaTerbuka,
+  lencanaDiperoleh,
   spriteCho,
   spriteOnes,
 } from './engine.js';
 import {
   kartuTerbukaTersimpan,
   simpanKartuTerbuka,
+  lencanaTersimpan,
+  simpanLencana,
   tambahTamat,
 } from './save.js';
 
@@ -217,6 +220,29 @@ function setScene(tokoh, latarBerkas, spriteId, posisi) {
   img.classList.add('pos-' + pos);
 }
 
+// Jam berjalan tiap tokoh di pojok kanan atas scene masing-masing. Nilai jam
+// dari keputusan.jam (format 24 jam bertitik, mis. 07.30) dan jam absen dari
+// konstanta.jam_absen. Dipanggil tiap render layar main / kejadian sisipan.
+function renderJam() {
+  const absen = content.konstanta && content.konstanta.jam_absen;
+  for (const [tokoh, jam] of [
+    ['cho', sesi.jamCho],
+    ['ones', sesi.jamOnes],
+  ]) {
+    const host = el('jam-' + tokoh);
+    const waktu = el('jam-' + tokoh + '-waktu');
+    const ab = el('jam-' + tokoh + '-absen');
+    if (!host || !waktu) continue;
+    if (jam) {
+      waktu.textContent = jam;
+      if (ab) ab.textContent = absen ? 'absen ' + absen : '';
+      host.hidden = false;
+    } else {
+      host.hidden = true;
+    }
+  }
+}
+
 // Kanvas partikel abu: titik 1-2 piksel bertepi tajam, hanyut turun. Hormati
 // prefers-reduced-motion (satu bingkai statis, tanpa loop animasi).
 function mulaiAbu() {
@@ -297,6 +323,11 @@ function mulaiAbu() {
 }
 
 function resetSesi() {
+  const urutan = urutanKeputusan(content);
+  const jamAwal = (t) => {
+    const k = urutan.find((x) => x.tokoh === t);
+    return (k && k.jam) || '';
+  };
   sesi = {
     layar: 'judul',
     layarSebelum: null,
@@ -304,8 +335,12 @@ function resetSesi() {
     // Lapis 2-3 menyamakan asumsi masker dengan angka acuan. Lapisan berikutnya
     // menurunkannya dari barang yang dibawa Si Ones di O2.
     maskerId: 'kn95_rapat',
-    urutan: urutanKeputusan(content),
+    urutan,
     langkah: 0,
+    // jam berjalan tiap tokoh (pojok kanan atas scene). Diisi jam keputusan
+    // pertama masing-masing, lalu diperbarui tiap keputusan tokoh itu.
+    jamCho: jamAwal('cho'),
+    jamOnes: jamAwal('ones'),
     fase: 'pilih', // 'pilih' | 'akibat' | 'sisipan-pilih' | 'sisipan-akibat'
     kartuIdx: 0,
     pilihanCho: [],
@@ -507,6 +542,11 @@ function renderMain() {
     'Keputusan ' + (sesi.langkah + 1) + ' dari ' + sesi.urutan.length;
   renderHud('hud');
 
+  // Jam scene tokoh yang sedang giliran ikut keputusan ini; tokoh yang
+  // menunggu tetap pada jam terakhirnya.
+  if (k.tokoh === 'cho') sesi.jamCho = k.jam || sesi.jamCho;
+  else sesi.jamOnes = k.jam || sesi.jamOnes;
+
   const aktifCho = k.tokoh === 'cho';
   const choPra = !el('isi-cho').dataset.terisi && !aktifCho;
   const onesPra = !el('isi-ones').dataset.terisi && aktifCho;
@@ -573,6 +613,8 @@ function renderMain() {
     isiLain.textContent =
       'Menunggu giliran ' + (aktifCho ? NAMA.ones : NAMA.cho) + '.';
   }
+
+  renderJam();
 }
 
 // Tombol pilihan: chip nomor, label, dan (untuk keputusan biasa) biaya menit.
@@ -857,7 +899,20 @@ function renderSisipan() {
   } else {
     spEv = spriteOnes(content, sesi);
   }
-  setScene(aktifCho ? 'cho' : 'ones', ev.latar, spEv);
+  // Pengarah visual per pilihan kejadian pada fase akibat (mis. atap-sekarang
+  // -> latar terpeleset). Selaras dengan pola content.adegan.keputusan.
+  let latarEv = ev.latar;
+  if (sesi.fase === 'sisipan-akibat') {
+    const pid = sesi.sisipanTerakhir && sesi.sisipanTerakhir.id;
+    const ef =
+      (adEv.pilihan && pid && adEv.pilihan[pid]) || adEv.semua_pilihan || null;
+    if (ef) {
+      if (ef.latar) latarEv = ef.latar;
+      if (ef.sprite === false) spEv = null;
+    }
+  }
+  setScene(aktifCho ? 'cho' : 'ones', latarEv, spEv);
+  renderJam();
 
   const isi = el(aktifCho ? 'isi-cho' : 'isi-ones');
   isi.replaceChildren();
@@ -1195,6 +1250,16 @@ function renderMemo() {
     ' dari ' +
     content.kartu_fakta.length;
 
+  const lencanaRute = lencanaDiperoleh(content, {
+    pilihanCho: sesi.pilihanCho,
+    pilihanOnes: sesi.pilihanOnes,
+    barang: sesi.barang,
+    selesai: true,
+    ruteWfh: false,
+  });
+  simpanLencana(lencanaRute);
+  renderLencana('memo-lencana', lencanaRute, { semua: false });
+
   fokus(el('tombol-salin'));
 }
 
@@ -1226,6 +1291,71 @@ async function salinHasil() {
   sesi._toastTimer = setTimeout(() => {
     s.hidden = true;
   }, 2600);
+}
+
+// --- lencana ------------------------------------------------------------
+
+// Barisan lencana. Nama & ikon dari content.lencana. mode.semua = tampilkan
+// semua lencana (yang belum diperoleh diredupkan); selain itu hanya yang
+// diperoleh. Lencana dengan field `nada` (mis. Tangan Kosong) ditandai kelam,
+// bukan pujian.
+function renderLencana(hostId, diperoleh, mode = {}) {
+  const host = el(hostId);
+  if (!host) return;
+  host.replaceChildren();
+  const daftar = content.lencana || [];
+  const punya = diperoleh instanceof Set ? diperoleh : new Set(diperoleh || []);
+
+  const judul = document.createElement('h3');
+  judul.textContent = 'Lencana';
+  host.append(judul);
+
+  const tampil = mode.semua ? daftar : daftar.filter((l) => punya.has(l.id));
+  if (!tampil.length) {
+    const p = document.createElement('p');
+    p.className = 'lencana-kosong';
+    p.textContent = 'Belum ada lencana dari rute ini.';
+    host.append(p);
+    return;
+  }
+
+  const baris = document.createElement('div');
+  baris.className = 'lencana-baris';
+  for (const l of tampil) {
+    const item = document.createElement('div');
+    item.className = 'lencana-item';
+    if (!punya.has(l.id)) item.classList.add('terkunci');
+    if (l.nada) item.classList.add('kelam');
+
+    const img = document.createElement('img');
+    img.className = 'lencana-ikon';
+    img.alt = '';
+    const kotak = document.createElement('span');
+    kotak.className = 'lencana-kotak';
+    kotak.hidden = true;
+    img.onerror = () => {
+      img.hidden = true;
+      kotak.hidden = false;
+    };
+    img.src = 'img/' + l.ikon;
+
+    const teks = document.createElement('div');
+    teks.className = 'lencana-teks';
+    const nama = document.createElement('span');
+    nama.className = 'lencana-nama';
+    nama.textContent = l.nama;
+    teks.append(nama);
+    if (l.nada) {
+      const nada = document.createElement('span');
+      nada.className = 'lencana-nada';
+      nada.textContent = l.nada;
+      teks.append(nada);
+    }
+
+    item.append(img, kotak, teks);
+    baris.append(item);
+  }
+  host.append(baris);
 }
 
 // --- layar koleksi kartu --------------------------------------------
@@ -1260,6 +1390,19 @@ function renderKoleksi() {
     }
     box.append(div);
   }
+
+  const lencanaPunya = new Set([
+    ...lencanaTersimpan(),
+    ...lencanaDiperoleh(content, {
+      pilihanCho: sesi.pilihanCho,
+      pilihanOnes: sesi.pilihanOnes,
+      barang: sesi.barang,
+      selesai: sesi.sampaiHitung,
+      ruteWfh: false,
+    }),
+  ]);
+  renderLencana('koleksi-lencana', lencanaPunya, { semua: true });
+
   fokus(el('tombol-koleksi-kembali'));
 }
 
@@ -1275,6 +1418,10 @@ function ulang() {
   }
   setScene('cho', '', null);
   setScene('ones', '', null);
+  el('jam-cho').hidden = true;
+  el('jam-ones').hidden = true;
+  el('memo-lencana').replaceChildren();
+  el('koleksi-lencana').replaceChildren();
   el('panel-ones').classList.remove('panel--barang');
   hapusBarangMeja();
   el('hitung-teks').replaceChildren();
