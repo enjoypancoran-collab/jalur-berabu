@@ -1087,7 +1087,7 @@
           "id": "mata-bilas",
           "label": "Bilas dengan botol air, biarkan partikelnya keluar sendiri",
           "syarat": "barang botol_air dibawa",
-          "pp_tetap": 0.0,
+          "pp_tetap": 10.0,
           "kalimat_akibat": "Si Ones menuang air ke telapak tangannya lalu membasuh matanya pelan-pelan. Rasa perihnya berkurang setelah beberapa kali berkedip."
         },
         {
