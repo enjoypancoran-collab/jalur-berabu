@@ -41,6 +41,7 @@ import {
   hentikanKlip,
   toggleBisu,
   sedangBisu,
+  setOnKlipMulai,
 } from './audio.js';
 
 // Satu-satunya dua label tampilan yang tidak ada di content.json: content
@@ -135,6 +136,7 @@ async function mulai() {
 
   siapkanBantuan();
   siapkanIntro();
+  setOnKlipMulai(onKlipBerubah);
 
   window.addEventListener('keydown', tekan);
   mulaiAbu();
@@ -419,6 +421,8 @@ function pergiKe(nama) {
 
   // Rute perjalanan selesai: kemajuan tertunda tak lagi berlaku.
   if (nama === 'tiba' || nama === 'wfh') hapusKemajuan();
+  // Wajah close-up hanya hidup di kartu pembuka.
+  if (nama !== 'kartu') sembunyikanWajah();
 
   // Latar penuh layar dari field latar (kalau ada untuk layar ini).
   const latarLayar = {
@@ -544,6 +548,20 @@ function pulihkanSpriteEfek() {
 }
 
 // --- kartu pembuka ---------------------------------------------------------
+
+// Wajah close-up di sudut bawah selama narasi tokoh berbunyi (kartu pembuka).
+// brief.cho -> wajah kiri bawah; brief.ones -> wajah kanan bawah. Klip lain
+// atau berhenti -> kedua wajah disembunyikan.
+function onKlipBerubah(kunci) {
+  const diKartu = sesi && sesi.layar === 'kartu';
+  el('wajah-cho').hidden = !(diKartu && kunci === 'brief.cho');
+  el('wajah-ones').hidden = !(diKartu && kunci === 'brief.ones');
+}
+
+function sembunyikanWajah() {
+  el('wajah-cho').hidden = true;
+  el('wajah-ones').hidden = true;
+}
 
 function renderKartu() {
   const kartu = content.layar.kartu_pembuka;
@@ -874,7 +892,6 @@ function renderMain() {
   el('panel-ones').classList.toggle('pra', onesPra);
   el('panel-cho').classList.toggle('redup', !aktifCho && !choPra);
   el('panel-ones').classList.toggle('redup', aktifCho && !onesPra);
-  el('kenapa-catatan').hidden = true;
 
   // Latar keputusan dari field latar; sprite tokoh sesuai aturan aset; lalu
   // ditimpa pengarah visual content.adegan. Panel menunggu tetap pada scene
@@ -1223,7 +1240,6 @@ function renderSisipan() {
   const aktifCho = ev.tokoh === 'cho';
   el('panel-cho').classList.toggle('redup', !aktifCho);
   el('panel-ones').classList.toggle('redup', aktifCho);
-  el('kenapa-catatan').hidden = true;
 
   const adEv = adeganKejadian(ev.id);
   let spEv;
@@ -1489,8 +1505,7 @@ function mulaiHitung() {
       } else if (bagian.bagian === 'opsi_keempat' && i === 1) {
         jeda = ms(bagian.jeda_di_tengah_detik);
       }
-      // Klip bagian ini dibunyikan saat baris pertamanya muncul.
-      antrean.push({ teks, jeda, suara: i === 0 ? bagian.suara || null : null });
+      antrean.push({ teks, jeda });
     });
   }
 
@@ -1499,6 +1514,15 @@ function mulaiHitung() {
   // Dua batang Poin Paparan Abu Vulkanik milik pemain tetap terlihat.
   renderHud('hitung-hud');
   el('hitung-lanjut').hidden = true;
+
+  // Klip tiap bagian diputar BERURUTAN penuh (tally.open -> numbers -> verdict
+  // -> wfh), tidak saling memotong. Teks tetap muncul di tempo sendiri; tombol
+  // Lanjut tidak menunggu klip.
+  const klipUrut = content.layar.hitung.urutan
+    .map((b) => b.suara)
+    .filter(Boolean);
+  putarKlip(klipUrut);
+
   langkahHitung();
 }
 
@@ -1514,7 +1538,6 @@ function langkahHitung() {
   h.timer = setTimeout(() => {
     h.timer = null;
     tambahBarisHitung(item.teks);
-    if (item.suara) putarKlip(item.suara);
     langkahHitung();
   }, item.jeda);
 }
@@ -1543,19 +1566,23 @@ function lewatiHitung() {
 
 // --- kartu memo -------------------------------------------------------
 
+// Satuan di kartu memo, ditulis lengkap sesuai permintaan.
+const SATUAN_MEMO = ' poin paparan abu vulkanik';
+
 // Pasangan [label, nilai] untuk ringkasan memo.
 function ringkasanMemo() {
   const c = hasilCho().paparan;
   const o = hasilOnes().paparan;
   const acu = hitungAngkaHitung();
   const L = content.label.paparan_penuh;
+  const U = SATUAN_MEMO;
   return [
-    [L + ' ' + NAMA.cho + ' (rutemu)', fmt1(c) + ' poin'],
-    [L + ' ' + NAMA.ones + ' (rutemu)', fmt1(o) + ' poin'],
-    ['Rute paling aman ' + NAMA.cho, fmt1(acu.cho) + ' poin'],
-    ['Rute paling aman ' + NAMA.ones, fmt1(acu.ones) + ' poin'],
-    ['Batas aman', fmt1(acu.ambang) + ' poin'],
-    ['Rute bekerja dari rumah', fmt1(acu.wfh) + ' poin'],
+    [L + ' ' + NAMA.cho + ' (rutemu)', fmt1(c) + U],
+    [L + ' ' + NAMA.ones + ' (rutemu)', fmt1(o) + U],
+    ['Rute paling aman ' + NAMA.cho, fmt1(acu.cho) + U],
+    ['Rute paling aman ' + NAMA.ones, fmt1(acu.ones) + U],
+    ['Batas aman', fmt1(acu.ambang) + U],
+    ['WFH', fmt1(acu.wfh) + U],
   ];
 }
 
@@ -1585,7 +1612,7 @@ function tigaTindakan() {
   kontrib.sort((a, b) => b.pp - a.pp);
   return kontrib
     .slice(0, 3)
-    .map((c) => c.nama + ': ' + c.label + ' — ' + fmt1(c.pp) + ' poin');
+    .map((c) => c.nama + ': ' + c.label + ' — ' + fmt1(c.pp) + SATUAN_MEMO);
 }
 
 function teksMemo() {
@@ -1703,8 +1730,8 @@ function renderPapanSkor(hostId) {
   const metrik = (content.papan_skor && content.papan_skor.metrik) || [];
   const p = papanSkorTersimpan();
   const nilai = [
-    typeof p.ppGabungan === 'number' ? fmt1(p.ppGabungan) + ' poin' : '—',
-    typeof p.ppOnes === 'number' ? fmt1(p.ppOnes) + ' poin' : '—',
+    typeof p.ppGabungan === 'number' ? fmt1(p.ppGabungan) + SATUAN_MEMO : '—',
+    typeof p.ppOnes === 'number' ? fmt1(p.ppOnes) + SATUAN_MEMO : '—',
     typeof p.menitAman === 'number' ? p.menitAman + ' menit' : '—',
   ];
 
@@ -2059,9 +2086,7 @@ function siapkanBantuan() {
     'Tujuannya sampai di Gadog sebelum absen ' + content.konstanta.jam_absen +
       '. Setelah keduanya tiba, layar hitung menjumlahkan ulang seluruh ' +
       'kemungkinan rute dan menutup dengan satu opsi terakhir.',
-    'Permainan tidak pernah maju sendiri: selalu tekan ' + T.lanjut +
-      '. Tekan ' + P.kenapa + ' untuk melihat catatan mesin di balik ' +
-      'sebuah keputusan.',
+    'Permainan tidak pernah maju sendiri: selalu tekan ' + T.lanjut + '.',
   ];
   const box = el('bantuan-caramain');
   box.replaceChildren();
@@ -2074,7 +2099,6 @@ function siapkanBantuan() {
   const baris = [
     [P.pilihan, 'Ambil pilihan yang sesuai nomornya'],
     [P.lanjut, T.lanjut],
-    [P.kenapa, T.kenapa + ' — catatan mesin keputusan ini'],
     [P.bantuan, T.bantuan + ' — buka atau tutup layar ini'],
     [P.bisu, T.suara + ' — bisukan atau hidupkan'],
     [P.ulang, T.ulang + ' — kembali ke layar judul'],
@@ -2130,7 +2154,6 @@ function teksPintasan() {
   return (
     'Pintasan: pilihan ' + P.pilihan +
     ' | lanjut ' + P.lanjut +
-    ' | ' + P.kenapa + ' ' + content.label.tombol.kenapa +
     ' | ' + P.bantuan + ' ' + content.label.tombol.bantuan +
     ' | ' + P.bisu + ' ' + content.label.tombol.suara +
     ' | ulang ' + P.ulang +
@@ -2233,30 +2256,12 @@ function tekan(ev) {
       pergiKe(sesi.layarSebelum || 'judul');
       return;
     }
-    el('kenapa-catatan').hidden = true;
     return;
   }
 
   if (cocok(key, P.salin) && layar === 'memo') {
     ev.preventDefault();
     salinHasil();
-    return;
-  }
-
-  if (
-    cocok(key, P.kenapa) &&
-    layar === 'main' &&
-    (sesi.fase === 'pilih' || sesi.fase === 'akibat')
-  ) {
-    ev.preventDefault();
-    const k = sesi.urutan[sesi.langkah];
-    const c = el('kenapa-catatan');
-    if (c.hidden) {
-      c.textContent = k.catatan_mesin || 'Tidak ada catatan untuk keputusan ini.';
-      c.hidden = false;
-    } else {
-      c.hidden = true;
-    }
     return;
   }
 

@@ -23,6 +23,25 @@ let bisu = false;
 let siap = false;
 let klipSekarang = null; // Audio yang sedang berbunyi
 let antre = []; // sisa kunci dari panggilan array (mis. ["brief.cho","brief.ones"])
+let onKlip = null; // callback(kunci|null): kunci klip yang mulai, null saat diam
+
+/**
+ * Daftarkan callback yang dipanggil dengan kunci klip saat sebuah klip mulai
+ * berbunyi, dan dengan null saat pemutaran berhenti / antrean habis. Dipakai
+ * ui.js untuk memunculkan wajah tokoh selama narasi kartu pembuka.
+ */
+export function setOnKlipMulai(fn) {
+  onKlip = typeof fn === 'function' ? fn : null;
+}
+
+function kabari(kunci) {
+  if (!onKlip) return;
+  try {
+    onKlip(kunci);
+  } catch (e) {
+    /* callback tak boleh menahan pemutar */
+  }
+}
 
 /**
  * Muat peta klip dan pengaturan. Dipanggil sekali setelah content.json siap.
@@ -90,11 +109,22 @@ function mainkan(src) {
 }
 
 function lanjutAntre() {
-  if (bisu || !antre.length) return;
+  if (bisu) {
+    kabari(null);
+    return;
+  }
+  if (!antre.length) {
+    kabari(null);
+    return;
+  }
   const kunci = antre.shift();
   const src = peta[kunci];
-  if (src) mainkan(src);
-  else lanjutAntre();
+  if (src) {
+    kabari(kunci);
+    mainkan(src);
+  } else {
+    lanjutAntre();
+  }
 }
 
 /**
@@ -118,6 +148,7 @@ export function hentikanKlip() {
     }
     klipSekarang = null;
   }
+  kabari(null);
 }
 
 /** true kalau suara sedang dibisukan. */
