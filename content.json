@@ -1472,6 +1472,7 @@
       "screen_tiba.png"
     ],
     "keputusan": {
+      "C2": { "semua_pilihan": { "latar": "bg_cho_carport_bersih.png" } },
       "O1": { "semua_pilihan": { "latar": "bg_ones_kos_tutup.png" } },
       "O2": { "sprite": false, "mode": "barang_meja" },
       "C3": { "sprite": false },
