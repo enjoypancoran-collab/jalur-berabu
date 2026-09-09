@@ -719,6 +719,11 @@ p { margin: 0 0 0.75rem; }
   font-size: 1.06rem;
 }
 .hitung-baris:last-child { color: var(--ink); }
+/* inti pesan layar hitung: kalimat rute bekerja dari rumah */
+.hitung-baris--inti {
+  font-weight: 700;
+  color: var(--ink);
+}
 #hitung-lanjut { margin-top: 1.2rem; }
 
 /* ---------- memo ---------- */

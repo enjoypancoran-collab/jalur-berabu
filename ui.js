@@ -1548,7 +1548,7 @@ function mulaiHitung() {
       } else if (bagian.bagian === 'opsi_keempat' && i === 1) {
         jeda = ms(bagian.jeda_di_tengah_detik);
       }
-      antrean.push({ teks, jeda });
+      antrean.push({ teks, jeda, bagian: bagian.bagian });
     });
   }
 
@@ -1580,14 +1580,16 @@ function langkahHitung() {
   const item = h.antrean[h.idx++];
   h.timer = setTimeout(() => {
     h.timer = null;
-    tambahBarisHitung(item.teks);
+    tambahBarisHitung(item.teks, item.bagian);
     langkahHitung();
   }, item.jeda);
 }
 
-function tambahBarisHitung(teks) {
+// Baris bagian "opsi_keempat" (kalimat WFH) di-bold: itu inti pesan layar ini.
+function tambahBarisHitung(teks, bagian) {
   const p = document.createElement('p');
-  p.className = 'hitung-baris';
+  p.className =
+    'hitung-baris' + (bagian === 'opsi_keempat' ? ' hitung-baris--inti' : '');
   p.textContent = teks;
   el('hitung-teks').append(p);
 }
@@ -1599,7 +1601,8 @@ function lewatiHitung() {
     h.timer = null;
   }
   while (h.idx < h.antrean.length) {
-    tambahBarisHitung(h.antrean[h.idx++].teks);
+    const it = h.antrean[h.idx++];
+    tambahBarisHitung(it.teks, it.bagian);
   }
   hentikanKlip(); // dilewati: jangan bunyikan sisa klip bagian
   h.selesai = true;
