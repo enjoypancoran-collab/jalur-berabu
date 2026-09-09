@@ -788,6 +788,14 @@ p { margin: 0 0 0.75rem; }
   color: color-mix(in srgb, var(--ink) 60%, transparent);
 }
 
+/* ---------- papan skor (lapis 6) ---------- */
+
+.papan-skor { margin: 1.2rem 0 0.4rem; }
+.papan-skor:empty { margin: 0; }
+.papan-skor h3 { margin-top: 0; }
+.papan-skor .ringkas { margin: 0.4rem 0 0; }
+.papan-skor dd { color: color-mix(in srgb, var(--jingga, #c4622d) 88%, black); }
+
 /* ---------- koleksi ---------- */
 
 .koleksi-bar {

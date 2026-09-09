@@ -28,7 +28,19 @@ import {
   tambahTamat,
   introDilihatTersimpan,
   tandaiIntroDilihat,
+  papanSkorTersimpan,
+  perbaruiPapanSkor,
+  simpanKemajuan,
+  kemajuanTersimpan,
+  hapusKemajuan,
 } from './save.js';
+import {
+  siapkanAudio,
+  putarKlip,
+  hentikanKlip,
+  toggleBisu,
+  sedangBisu,
+} from './audio.js';
 
 // Satu-satunya dua label tampilan yang tidak ada di content.json: content
 // tidak punya field nama tokoh. Semua string lain bersumber dari content.
@@ -71,6 +83,9 @@ async function mulai() {
   el('status').hidden = true;
   P = content.antarmuka.pintasan;
   terapkanPalet();
+  // Peta klip + pengaturan suara. Tidak membunyikan apa pun: baris peringatan
+  // suara di layar judul tampil dulu, klip pertama menunggu tombol Mulai pagi.
+  await siapkanAudio(content);
 
   if (window.matchMedia && window.matchMedia('(max-width: 599px)').matches) {
     document.body.replaceChildren();
@@ -93,8 +108,10 @@ async function mulai() {
   el('nama-cho').textContent = NAMA.cho;
   el('nama-ones').textContent = NAMA.ones;
   el('bantuan-pintasan').textContent = teksPintasan();
+  el('tombol-lanjutkan').textContent = 'Lanjutkan pagi';
 
-  el('tombol-mulai').addEventListener('click', () => pergiKe('kartu'));
+  el('tombol-mulai').addEventListener('click', mulaiPagi);
+  el('tombol-lanjutkan').addEventListener('click', lanjutkanPagi);
   el('tombol-kartu').addEventListener('click', lanjutKartu);
   el('tombol-tiba-lanjut').addEventListener('click', () => pergiKe('hitung'));
   el('tombol-tiba-lanjut').textContent = content.label.tombol.lanjut;
@@ -371,6 +388,8 @@ function resetSesi() {
     introAktif: false,
     introLangkah: 0,
     bantuanAktif: false,
+    // suara (lapis 6): klip pembuka diputar sekali per sesi
+    klipPembukaDiputar: false,
     // status sprite (lapis 4)
     kepChoTerakhir: null,
     choSpriteEfek: null, // dari efek.aset_tokoh (cho_jacket)
@@ -391,6 +410,9 @@ function pergiKe(nama) {
   if (nama !== 'koleksi') sesi.layarSebelum = sesi.layar;
   sesi.layar = nama;
 
+  // Rute perjalanan selesai: kemajuan tertunda tak lagi berlaku.
+  if (nama === 'tiba') hapusKemajuan();
+
   // Latar penuh layar dari field latar (kalau ada untuk layar ini).
   const latarLayar = {
     judul: content.layar.judul && content.layar.judul.latar,
@@ -408,8 +430,11 @@ function pergiKe(nama) {
   }
   if (typeof window.scrollTo === 'function') window.scrollTo(0, 0);
 
-  if (nama === 'judul') fokus(el('tombol-mulai'));
-  else if (nama === 'kartu') renderKartu();
+  if (nama === 'judul') {
+    const adaKemajuan = !!kemajuanTersimpan();
+    el('tombol-lanjutkan').hidden = !adaKemajuan;
+    fokus(el(adaKemajuan ? 'tombol-lanjutkan' : 'tombol-mulai'));
+  } else if (nama === 'kartu') renderKartu();
   else if (nama === 'main') renderMain();
   else if (nama === 'tiba') renderTiba();
   else if (nama === 'hitung') mulaiHitung();
@@ -420,6 +445,93 @@ function pergiKe(nama) {
 function bukaKoleksi() {
   sesi.layarSebelum = sesi.layar;
   pergiKe('koleksi');
+}
+
+// --- mulai / lanjutkan pagi ------------------------------------------------
+
+// Tombol Mulai pagi: pemicu klip pertama (baris peringatan suara di layar
+// judul sudah tampil sejak halaman terbuka).
+function mulaiPagi() {
+  pergiKe('kartu'); // klip title.intro + brief diputar oleh renderKartu kartu 1
+}
+
+// Tombol Lanjutkan pagi: pulihkan sesi dari cuplikan kemajuan tersimpan.
+function lanjutkanPagi() {
+  const k = kemajuanTersimpan();
+  if (!k) {
+    mulaiPagi();
+    return;
+  }
+  resetSesi();
+  sesi.langkah = k.langkah || 0;
+  sesi.fase = 'pilih';
+  if (typeof k.angin === 'number') sesi.angin = k.angin;
+  if (k.maskerId) sesi.maskerId = k.maskerId;
+  sesi.pilihanCho = Array.isArray(k.pilihanCho) ? k.pilihanCho.slice() : [];
+  sesi.pilihanOnes = Array.isArray(k.pilihanOnes) ? k.pilihanOnes.slice() : [];
+  sesi.barang = Array.isArray(k.barang) ? k.barang.slice() : [];
+  sesi.serempet = !!k.serempet;
+  sesi.sisipanSelesai = Array.isArray(k.sisipanSelesai)
+    ? k.sisipanSelesai.slice()
+    : [];
+  sesi.pilihanMata = k.pilihanMata || null;
+  sesi.pilihanAtap = k.pilihanAtap || null;
+  if (k.jamCho) sesi.jamCho = k.jamCho;
+  if (k.jamOnes) sesi.jamOnes = k.jamOnes;
+  // sorotan pengenalan tidak muncul lagi saat melanjutkan
+  sesi.introDijalankan = true;
+  sesi.klipPembukaDiputar = true;
+  const kepCho = sesi.urutan.filter((x) => x.tokoh === 'cho');
+  sesi.kepChoTerakhir = kepCho[sesi.pilihanCho.length - 1] || null;
+  pulihkanSpriteEfek();
+  for (const id of ['isi-cho', 'isi-ones']) {
+    el(id).replaceChildren();
+    delete el(id).dataset.terisi;
+  }
+  bukaKartu();
+  pergiKe('main');
+}
+
+// Cuplikan sesi secukupnya untuk melanjutkan pagi yang sama.
+function buatCuplikanKemajuan() {
+  return {
+    langkah: sesi.langkah,
+    angin: sesi.angin,
+    maskerId: sesi.maskerId,
+    jamCho: sesi.jamCho,
+    jamOnes: sesi.jamOnes,
+    pilihanCho: sesi.pilihanCho.slice(),
+    pilihanOnes: sesi.pilihanOnes.slice(),
+    barang: sesi.barang.slice(),
+    serempet: sesi.serempet,
+    sisipanSelesai: sesi.sisipanSelesai.slice(),
+    pilihanMata: sesi.pilihanMata,
+    pilihanAtap: sesi.pilihanAtap,
+  };
+}
+
+// Susun ulang sprite efek dari pilihan yang tercatat (jaket C1, lelah setelah
+// serempet, mata lelah setelah iritasi).
+function pulihkanSpriteEfek() {
+  const peta = new Map();
+  for (const kk of content.keputusan) {
+    for (const pp of kk.pilihan || []) peta.set(pp.id, pp);
+  }
+  for (const id of sesi.pilihanCho) {
+    const p = peta.get(id);
+    if (!p || !p.efek) continue;
+    if (p.efek.aset_tokoh) sesi.choSpriteEfek = p.efek.aset_tokoh;
+    if (sesi.serempet && p.efek.aset_tokoh_setelah_serempet) {
+      sesi.choTiredSprite = p.efek.aset_tokoh_setelah_serempet;
+    }
+  }
+  const mata = (content.kejadian_sisipan || []).find((e) => e.id === 'mata');
+  if (mata && sesi.pilihanMata) {
+    const pm = (mata.pilihan || []).find((x) => x.id === sesi.pilihanMata);
+    if (pm && pm.efek && pm.efek.aset_tokoh) {
+      sesi.onesSpriteEfek = pm.efek.aset_tokoh;
+    }
+  }
 }
 
 // --- kartu pembuka ---------------------------------------------------------
@@ -434,6 +546,19 @@ function renderKartu() {
   el('tombol-kartu').textContent = k.tombol || content.label.tombol.lanjut;
   ilustrasiKartu(sesi.kartuIdx, k);
   setLatarKartu(sesi.kartuIdx);
+
+  // Klip pertama: title.intro lalu narasi kartu pembuka pertama, berurutan.
+  // Dipicu oleh tombol Mulai pagi (yang membawa kita ke kartu 1).
+  if (sesi.kartuIdx === 0 && !sesi.klipPembukaDiputar) {
+    sesi.klipPembukaDiputar = true;
+    const runtun = [content.layar.judul.suara].concat(
+      Array.isArray(k.suara) ? k.suara : k.suara ? [k.suara] : [],
+    );
+    putarKlip(runtun);
+  } else if (sesi.kartuIdx > 0 && k.suara) {
+    putarKlip(k.suara);
+  }
+
   fokus(el('tombol-kartu'));
 }
 
@@ -716,6 +841,14 @@ function renderMain() {
   }
 
   const k = sesi.urutan[sesi.langkah];
+
+  // Awal keputusan: simpan kemajuan (semua keputusan sebelumnya terkunci) dan
+  // hentikan narasi kartu pembuka yang mungkin masih berbunyi.
+  if (sesi.fase === 'pilih') {
+    if (sesi.langkah === 0) hentikanKlip();
+    simpanKemajuan(buatCuplikanKemajuan());
+  }
+
   el('kemajuan').textContent =
     'Keputusan ' + (sesi.langkah + 1) + ' dari ' + sesi.urutan.length;
   renderHud('hud');
@@ -1260,7 +1393,8 @@ function mulaiHitung() {
       } else if (bagian.bagian === 'opsi_keempat' && i === 1) {
         jeda = ms(bagian.jeda_di_tengah_detik);
       }
-      antrean.push({ teks, jeda });
+      // Klip bagian ini dibunyikan saat baris pertamanya muncul.
+      antrean.push({ teks, jeda, suara: i === 0 ? bagian.suara || null : null });
     });
   }
 
@@ -1284,6 +1418,7 @@ function langkahHitung() {
   h.timer = setTimeout(() => {
     h.timer = null;
     tambahBarisHitung(item.teks);
+    if (item.suara) putarKlip(item.suara);
     langkahHitung();
   }, item.jeda);
 }
@@ -1304,6 +1439,7 @@ function lewatiHitung() {
   while (h.idx < h.antrean.length) {
     tambahBarisHitung(h.antrean[h.idx++].teks);
   }
+  hentikanKlip(); // dilewati: jangan bunyikan sisa klip bagian
   h.selesai = true;
   el('hitung-lanjut').hidden = false;
   fokus(el('hitung-lanjut'));
@@ -1439,7 +1575,59 @@ function renderMemo() {
   simpanLencana(lencanaRute);
   renderLencana('memo-lencana', lencanaRute, { semua: false });
 
+  catatPapanSkor();
+  renderPapanSkor('memo-papan-skor');
+
+  putarKlip(content.layar.memo.suara);
   fokus(el('tombol-salin'));
+}
+
+// --- papan skor (lapis 6) -------------------------------------------------
+
+// Tiga metrik di content.papan_skor.metrik, disimpan di localStorage:
+//   1. Poin Paparan Abu Vulkanik gabungan (Bro Cho + Si Ones) terendah
+//   2. Poin Paparan Abu Vulkanik Si Ones terendah
+//   3. menit tambahan tersingkat pada rute yang tetap di bawah ambang aman
+//      (Bro Cho; Si Ones memang tidak bisa turun ke bawah ambang)
+function catatPapanSkor() {
+  const c = hasilCho();
+  const o = hasilOnes();
+  const aman = c.paparan <= content.konstanta.ambang_aman;
+  perbaruiPapanSkor({
+    ppGabungan: bulatkanSatuDesimal(c.paparan + o.paparan),
+    ppOnes: bulatkanSatuDesimal(o.paparan),
+    menitAman: aman ? c.menitTambahan + o.menitTambahan : undefined,
+  });
+}
+
+function renderPapanSkor(hostId) {
+  const host = el(hostId);
+  if (!host) return;
+  host.replaceChildren();
+  const metrik = (content.papan_skor && content.papan_skor.metrik) || [];
+  const p = papanSkorTersimpan();
+  const nilai = [
+    typeof p.ppGabungan === 'number' ? fmt1(p.ppGabungan) + ' poin' : '—',
+    typeof p.ppOnes === 'number' ? fmt1(p.ppOnes) + ' poin' : '—',
+    typeof p.menitAman === 'number' ? p.menitAman + ' menit' : '—',
+  ];
+
+  const judul = document.createElement('h3');
+  judul.textContent = 'Papan skor';
+  host.append(judul);
+
+  const dl = document.createElement('dl');
+  dl.className = 'ringkas';
+  metrik.forEach((label, i) => {
+    const row = document.createElement('div');
+    const dt = document.createElement('dt');
+    dt.textContent = label;
+    const dd = document.createElement('dd');
+    dd.textContent = nilai[i] || '—';
+    row.append(dt, dd);
+    dl.append(row);
+  });
+  host.append(dl);
 }
 
 async function salinHasil() {
@@ -1461,15 +1649,24 @@ async function salinHasil() {
       ok = false;
     }
   }
+  toast(
+    ok
+      ? content.layar.memo.pemberitahuan_salin
+      : 'Salin gagal. Pilih teks memo secara manual.',
+  );
+}
+
+// Pesan singkat mengambang (dipakai untuk salin hasil & tombol bisu).
+function toast(pesan, ms) {
   const s = el('salin-status');
-  s.textContent = ok
-    ? content.layar.memo.pemberitahuan_salin
-    : 'Salin gagal. Pilih teks memo secara manual.';
+  if (!s) return;
+  s.textContent = pesan;
   s.hidden = false;
   clearTimeout(sesi._toastTimer);
   sesi._toastTimer = setTimeout(() => {
     s.hidden = true;
-  }, 2600);
+    s.textContent = '';
+  }, ms || 2600);
 }
 
 // --- lencana ------------------------------------------------------------
@@ -1581,6 +1778,7 @@ function renderKoleksi() {
     }),
   ]);
   renderLencana('koleksi-lencana', lencanaPunya, { semua: true });
+  renderPapanSkor('koleksi-papan-skor');
 
   fokus(el('tombol-koleksi-kembali'));
 }
@@ -1590,6 +1788,8 @@ function renderKoleksi() {
 function ulang() {
   if (sesi.layar === 'judul') return;
   if (sesi.hitung.timer) clearTimeout(sesi.hitung.timer);
+  hentikanKlip();
+  hapusKemajuan(); // Mulai ulang membuang pagi yang sedang berjalan
   resetSesi();
   // R selalu memunculkan sorotan pengenalan lagi, walau sudah pernah dilihat.
   sesi.introPaksa = true;
@@ -1835,6 +2035,8 @@ function teksPintasan() {
     'Pintasan: pilihan ' + P.pilihan +
     ' | lanjut ' + P.lanjut +
     ' | ' + P.kenapa + ' ' + content.label.tombol.kenapa +
+    ' | ' + P.bantuan + ' ' + content.label.tombol.bantuan +
+    ' | ' + P.bisu + ' ' + content.label.tombol.suara +
     ' | ulang ' + P.ulang +
     ' | ' + P.salin + ' salin (di memo)' +
     ' | tutup ' + P.tutup
@@ -1845,6 +2047,14 @@ function tekan(ev) {
   if (!sesi) return;
   const key = ev.key;
   const layar = sesi.layar;
+
+  // Bisu (M): berlaku di layar mana pun, termasuk saat tindihan terbuka.
+  if (cocok(key, P.bisu)) {
+    ev.preventDefault();
+    const dibisukan = toggleBisu();
+    toast(dibisukan ? 'Suara dibisukan' : 'Suara dihidupkan');
+    return;
+  }
 
   // Layar bantuan menindih segalanya: hanya H atau Esc yang berlaku.
   if (sesi.bantuanAktif) {
@@ -1974,7 +2184,6 @@ function tekan(ev) {
     return;
   }
 
-  // P.bisu (M), P.bantuan (H): menyusul di lapisan berikutnya.
 }
 
 // --- uji angka acuan di browser (alat bantu, bukan bagian alur) ------------

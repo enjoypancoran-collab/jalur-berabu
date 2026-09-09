@@ -1,0 +1,14 @@
+{
+  "title.intro": "audio/vo_01_judul.mp3",
+  "brief.cho": "audio/vo_02_cho.mp3",
+  "brief.ones": "audio/vo_03_ones.mp3",
+  "tally.open": "audio/vo_04_hitung_buka.mp3",
+  "tally.numbers": "audio/vo_05_hitung_angka.mp3",
+  "tally.verdict": "audio/vo_06_hitung_vonis.mp3",
+  "tally.wfh": "audio/vo_07_wfh_angka.mp3",
+  "memo.close": "audio/vo_08_memo.mp3",
+  "end.sick": "audio/vo_09_gagal_sakit.mp3",
+  "end.late": "audio/vo_10_gagal_telat.mp3",
+  "end.both": "audio/vo_11_gagal_dua.mp3",
+  "end.wfh": "audio/vo_12_wfh_terkunci.mp3"
+}
