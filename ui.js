@@ -26,6 +26,7 @@ import {
   lencanaTersimpan,
   simpanLencana,
   tambahTamat,
+  jumlahTamat,
   introDilihatTersimpan,
   tandaiIntroDilihat,
   papanSkorTersimpan,
@@ -46,7 +47,7 @@ import {
 // tidak punya field nama tokoh. Semua string lain bersumber dari content.
 const NAMA = { cho: 'Bro Cho', ones: 'Si Ones' };
 
-const LAYAR = ['judul', 'kartu', 'main', 'tiba', 'hitung', 'memo', 'koleksi'];
+const LAYAR = ['judul', 'kartu', 'main', 'tiba', 'hitung', 'memo', 'koleksi', 'wfh'];
 
 let content;
 let P; // content.antarmuka.pintasan
@@ -127,6 +128,10 @@ async function mulai() {
   el('tombol-koleksi-kembali').addEventListener('click', () =>
     pergiKe(sesi.layarSebelum || 'judul'),
   );
+  el('tombol-wfh-koleksi').textContent = content.label.tombol.koleksi;
+  el('tombol-wfh-koleksi').addEventListener('click', () => bukaKoleksi());
+  el('tombol-wfh-ulang').textContent = content.label.tombol.ulang;
+  el('tombol-wfh-ulang').addEventListener('click', ulang);
 
   siapkanBantuan();
   siapkanIntro();
@@ -390,6 +395,8 @@ function resetSesi() {
     bantuanAktif: false,
     // suara (lapis 6): klip pembuka diputar sekali per sesi
     klipPembukaDiputar: false,
+    // rute bekerja dari rumah (lapis 7): diambil lewat pilihan tambahan di O1
+    ruteWfh: false,
     // status sprite (lapis 4)
     kepChoTerakhir: null,
     choSpriteEfek: null, // dari efek.aset_tokoh (cho_jacket)
@@ -411,7 +418,7 @@ function pergiKe(nama) {
   sesi.layar = nama;
 
   // Rute perjalanan selesai: kemajuan tertunda tak lagi berlaku.
-  if (nama === 'tiba') hapusKemajuan();
+  if (nama === 'tiba' || nama === 'wfh') hapusKemajuan();
 
   // Latar penuh layar dari field latar (kalau ada untuk layar ini).
   const latarLayar = {
@@ -419,6 +426,7 @@ function pergiKe(nama) {
     tiba: content.layar.tiba && content.layar.tiba.latar,
     hitung: content.layar.hitung && content.layar.hitung.latar,
     memo: content.layar.memo && content.layar.memo.latar,
+    wfh: content.layar.wfh && content.layar.wfh.latar,
   }[nama];
   setLatarLayar(latarLayar || '');
 
@@ -440,6 +448,7 @@ function pergiKe(nama) {
   else if (nama === 'hitung') mulaiHitung();
   else if (nama === 'memo') renderMemo();
   else if (nama === 'koleksi') renderKoleksi();
+  else if (nama === 'wfh') renderWfh();
 }
 
 function bukaKoleksi() {
@@ -967,6 +976,20 @@ function renderPilihan(k, isi) {
     sesi.tombolPilihan.push(b);
   });
 
+  // Rute bekerja dari rumah: pilihan tambahan di O1, hanya kalau terbuka.
+  if (k.id === 'O1' && wfhTerbuka()) {
+    const w = content.layar.wfh;
+    const b = tombolPilih(
+      sesi.tombolPilihan.length + 1,
+      w.pilihan_tambahan_di_O1,
+      null,
+    );
+    b.classList.add('pilih--wfh');
+    b.addEventListener('click', pilihWfh);
+    isi.append(b);
+    sesi.tombolPilihan.push(b);
+  }
+
   fokus(sesi.tombolPilihan[0]);
 }
 
@@ -1297,6 +1320,79 @@ function renderTiba() {
     NAMA.cho + ' dan ' + NAMA.ones + ' sampai di Gadog.';
   renderHud('hud-tiba');
   fokus(el('tombol-tiba-lanjut'));
+}
+
+// --- rute bekerja dari rumah (lapis 7) -------------------------------
+
+// Ambang syarat_terbuka dibaca dari kalimat di content, bukan ditulis di kode.
+// "pemain menamatkan permainan dua kali ATAU mengumpulkan 10 kartu fakta".
+function wfhSyarat() {
+  const s = (content.layar.wfh && content.layar.wfh.syarat_terbuka) || '';
+  const kata = { se: 1, dua: 2, tiga: 3, empat: 4, lima: 5, enam: 6 };
+  const kartuM = s.match(/(\d+)\s*kartu/i);
+  const kaliM = s.match(/(\d+|se|dua|tiga|empat|lima|enam)\s*kali/i);
+  const tamatMin = kaliM
+    ? Number(kaliM[1]) || kata[kaliM[1].toLowerCase()] || 2
+    : 2;
+  const kartuMin = kartuM ? Number(kartuM[1]) : 10;
+  return { tamatMin, kartuMin };
+}
+
+function wfhTerbuka() {
+  const { tamatMin, kartuMin } = wfhSyarat();
+  return (
+    jumlahTamat() >= tamatMin || kartuTerbukaTersimpan().size >= kartuMin
+  );
+}
+
+// Pilihan tambahan di O1: Si Ones tidak berangkat. Pagi ditutup di sini.
+function pilihWfh() {
+  if (sesi.layar !== 'main' || sesi.fase !== 'pilih') return;
+  sesi.ruteWfh = true;
+  hentikanKlip();
+  pergiKe('wfh');
+}
+
+// "0.4" -> "nol koma empat" (bentuk yang diucapkan narator). Dipakai untuk
+// mengganti bentuk kata di w.teks dengan bentuk angka hasil hitung mesin.
+function angkaSatuDesimalKeKata(n) {
+  const v = bulatkanSatuDesimal(n);
+  const bulat = Math.floor(v);
+  const pecahan = Math.round((v - bulat) * 10);
+  return angkaKeKata(bulat) + ' koma ' + angkaKeKata(pecahan);
+}
+
+function renderWfh() {
+  const w = content.layar.wfh;
+  const lc = (content.lencana || []).find((l) => l.id === w.lencana);
+  el('wfh-judul').textContent = (lc && lc.nama) || '';
+
+  // Angka paparan dihitung ULANG oleh mesin (145 menit x laju rumah_tertutup),
+  // lalu bentuk kata di teks diganti bentuk angka. Tidak ada "0,4" di kode.
+  const paparanWfh = hitungWfh(content).paparan;
+  const angka = fmt1(paparanWfh);
+  let teks = w.teks || '';
+  teks = teks.split(angkaSatuDesimalKeKata(paparanWfh)).join(angka);
+  teks = teks.split(fmt1(content.angka_acuan.rute_wfh)).join(angka);
+  el('wfh-teks').textContent = teks;
+
+  if (!sesi.tamatDicatat) {
+    sesi.tamatDicatat = true;
+    tambahTamat();
+  }
+
+  const lencanaRute = lencanaDiperoleh(content, {
+    pilihanCho: [],
+    pilihanOnes: [],
+    barang: [],
+    selesai: false,
+    ruteWfh: true,
+  });
+  simpanLencana(lencanaRute);
+  renderLencana('wfh-lencana', lencanaRute, { semua: false });
+
+  putarKlip(w.suara); // end.wfh
+  fokus(el('tombol-wfh-koleksi'));
 }
 
 // --- Layar Hitung -----------------------------------------------------

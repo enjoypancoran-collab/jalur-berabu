@@ -169,7 +169,7 @@ p { margin: 0 0 0.75rem; }
 
 /* kartu-kartu di layar tengah */
 .judul-kartu, .pembuka-kartu, .tiba-kartu, .hitung-kartu,
-.memo-kertas, .koleksi-kartu, #status {
+.memo-kertas, .koleksi-kartu, .wfh-kartu, #status {
   background: var(--paper);
   color: var(--ink);
   border: 1px solid var(--line);
@@ -181,6 +181,30 @@ p { margin: 0 0 0.75rem; }
 .hitung-kartu { max-width: 720px; }
 .memo-kertas { max-width: 760px; text-align: left; }
 .koleksi-kartu { max-width: 960px; text-align: left; }
+.wfh-kartu { max-width: 620px; }
+.wfh-kartu #wfh-teks {
+  font-size: 1.06rem;
+  line-height: 1.55;
+  max-width: 48ch;
+  margin: 0.4rem auto 0.6rem;
+}
+.wfh-kartu .lencana-blok { margin-top: 1rem; }
+.wfh-kartu .lencana-baris { justify-content: center; }
+.wfh-aksi { justify-content: center; margin-top: 1.4rem; }
+
+/* pilihan bonus rute bekerja dari rumah: aksen hijau Gadog */
+.pilih--wfh {
+  border-left-color: var(--hijau_gadog, #4a6b4f);
+}
+.panel-isi .pilih--wfh {
+  border-left-color: var(--hijau_gadog, #4a6b4f);
+  background: color-mix(in srgb, var(--hijau_gadog, #4a6b4f) 16%, #14161a);
+}
+.panel-isi .pilih--wfh:hover {
+  background: color-mix(in srgb, var(--hijau_gadog, #4a6b4f) 28%, #14161a);
+  border-left-color: var(--hijau_gadog, #4a6b4f);
+}
+.panel-isi .pilih--wfh .chip { background: var(--hijau_gadog, #4a6b4f); }
 
 #status {
   max-width: 460px;
