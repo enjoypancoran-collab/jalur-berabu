@@ -1,25 +1,29 @@
 // sfx.js
-// Lapis 9: efek suara antarmuka (hover & klik) dan soundtrack ambient yang
-// tenang, semuanya DISINTESIS dengan Web Audio API -- tidak ada berkas aset.
+// Lapis 9: efek suara antarmuka (hover & klik) + soundtrack tenang saat tidak
+// ada voice over.
 //
-// Aturan:
-//   - Konteks audio dibuat & di-resume pada gestur pemain pertama (kebijakan
-//     autoplay peramban). Sebelum itu semua fungsi ini diam.
-//   - Soundtrack ambient meredup saat ada voice over berbunyi, kembali penuh
-//     saat senyap (redupAmbient dipanggil dari callback klip di ui.js).
+//   - Hover/klik: blip pendek disintesis dengan Web Audio API (tanpa aset).
+//   - Soundtrack: berkas audio/Magical-Moments-chosic.com_.mp3, di-loop,
+//     volume pelan, dirutekan lewat Web Audio supaya bisa diredupkan halus.
+//   - Konteks audio dibuka pada gestur pemain pertama (kebijakan autoplay).
+//   - Soundtrack meredup saat voice over berbunyi, kembali saat senyap.
 //   - Semua tunduk pada pilihan bisu yang sama dengan voice over (setSfxBisu).
-//   - Klip TIDAK PERNAH menahan permainan; ini murni dekorasi.
+//   - Murni dekorasi; tidak pernah menahan permainan.
+
+const TRAK_AMBIENT = 'audio/Magical-Moments-chosic.com_.mp3';
+
+// "Pelan saja": gain akhir soundtrack di jalur Web Audio.
+const AMB_PENUH = 0.11;
+const AMB_REDUP = 0.03; // saat voice over berbunyi
 
 let ctx = null;
 let masterSfx = null; // gain untuk hover/klik
-let ambGain = null; // gain soundtrack ambient (dipakai untuk meredup & bisu)
+let ambGain = null; // gain soundtrack (dipakai untuk meredup & bisu)
+let trakEl = null; // <audio> soundtrack
 let ambJalan = false;
 let bisu = false;
 let redup = false; // true selama voice over berbunyi
 let hoverTerakhir = 0;
-
-const AMB_PENUH = 0.05;
-const AMB_REDUP = 0.013;
 
 function buatKonteks() {
   if (ctx) return ctx;
@@ -39,7 +43,7 @@ function buatKonteks() {
   return ctx;
 }
 
-/** Dipanggil dari gestur pemain pertama: buka konteks & mulai ambient. */
+/** Dipanggil dari gestur pemain pertama: buka konteks & mulai soundtrack. */
 export function bukaSfx() {
   const c = buatKonteks();
   if (!c) return;
@@ -52,47 +56,20 @@ export function bukaSfx() {
 function mulaiAmbient() {
   if (!ctx || ambJalan) return;
   ambJalan = true;
-  const t = ctx.currentTime;
-
-  const hp = ctx.createBiquadFilter();
-  hp.type = 'highpass';
-  hp.frequency.value = 70;
-
-  const lp = ctx.createBiquadFilter();
-  lp.type = 'lowpass';
-  lp.frequency.value = 430;
-  lp.Q.value = 0.5;
-
-  // tremolo sangat pelan di jalur sinyal (bukan di ambGain, supaya ambGain
-  // tetap bersih untuk kontrol redup/bisu)
-  const trem = ctx.createGain();
-  trem.gain.value = 1;
-
-  hp.connect(lp).connect(trem).connect(ambGain);
-
-  // pad rendah: nada dasar + kuint + oktaf yang sedikit meleset (beating pelan)
-  const suara = [
-    [110, 0.5],
-    [110 * 1.5, 0.3],
-    [110 * 2.004, 0.22],
-  ];
-  for (const [f, g] of suara) {
-    const o = ctx.createOscillator();
-    o.type = 'sine';
-    o.frequency.value = f;
-    const og = ctx.createGain();
-    og.gain.value = g;
-    o.connect(og).connect(hp);
-    o.start(t);
+  try {
+    trakEl = new Audio(TRAK_AMBIENT);
+    trakEl.loop = true;
+    trakEl.preload = 'auto';
+    const src = ctx.createMediaElementSource(trakEl);
+    src.connect(ambGain);
+    const p = trakEl.play();
+    if (p && typeof p.catch === 'function') p.catch(() => {});
+    // Berkas 404 / gagal dekode: soundtrack tak berbunyi, game jalan terus.
+    trakEl.addEventListener('error', () => {});
+  } catch (e) {
+    trakEl = null;
   }
-
-  const lfo = ctx.createOscillator();
-  lfo.type = 'sine';
-  lfo.frequency.value = 0.07;
-  const lfoDepth = ctx.createGain();
-  lfoDepth.gain.value = 0.12;
-  lfo.connect(lfoDepth).connect(trem.gain);
-  lfo.start(t);
+  terapkanAmbGain();
 }
 
 function terapkanMaster() {
@@ -126,29 +103,29 @@ function blip(opsi) {
   o.stop(t + dur + 0.03);
 }
 
-/** Blip lembut saat kursor masuk ke elemen interaktif. Dibatasi lajunya. */
+/** Blip saat kursor masuk ke elemen interaktif. Dibatasi lajunya. */
 export function sfxHover() {
   const now =
     typeof performance !== 'undefined' && performance.now
       ? performance.now()
       : Date.now();
-  if (now - hoverTerakhir < 60) return;
+  if (now - hoverTerakhir < 55) return;
   hoverTerakhir = now;
-  blip({ freq: 880, dur: 0.04, gain: 0.028, type: 'sine' });
+  blip({ freq: 900, dur: 0.05, gain: 0.13, type: 'sine' });
 }
 
-/** Blip klik: sedikit lebih penuh, turun nada. */
+/** Blip klik: lebih penuh, turun nada. */
 export function sfxKlik() {
-  blip({ freq: 300, slideTo: 170, dur: 0.09, gain: 0.055, type: 'triangle' });
+  blip({ freq: 300, slideTo: 165, dur: 0.1, gain: 0.22, type: 'triangle' });
 }
 
-/** VO berbunyi -> ambient meredup; VO senyap -> ambient kembali penuh. */
+/** VO berbunyi -> soundtrack meredup; VO senyap -> kembali penuh. */
 export function redupAmbient(aktif) {
   redup = !!aktif;
   terapkanAmbGain();
 }
 
-/** Setel bisu untuk SFX & ambient (mengikuti pilihan bisu voice over). */
+/** Setel bisu untuk SFX & soundtrack (mengikuti pilihan bisu voice over). */
 export function setSfxBisu(nilai) {
   bisu = !!nilai;
   terapkanMaster();
