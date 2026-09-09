@@ -43,6 +43,13 @@ import {
   sedangBisu,
   setOnKlipMulai,
 } from './audio.js';
+import {
+  bukaSfx,
+  sfxHover,
+  sfxKlik,
+  redupAmbient,
+  setSfxBisu,
+} from './sfx.js';
 
 // Satu-satunya dua label tampilan yang tidak ada di content.json: content
 // tidak punya field nama tokoh. Semua string lain bersumber dari content.
@@ -137,6 +144,44 @@ async function mulai() {
   siapkanBantuan();
   siapkanIntro();
   setOnKlipMulai(onKlipBerubah);
+
+  // Efek suara antarmuka + soundtrack ambient (disintesis, tanpa aset).
+  // Konteks audio dibuka pada gestur pertama; ikut pilihan bisu voice over.
+  setSfxBisu(sedangBisu());
+  const bukaSekali = () => {
+    bukaSfx();
+    window.removeEventListener('pointerdown', bukaSekali);
+  };
+  window.addEventListener('pointerdown', bukaSekali);
+
+  const INTERAKTIF = 'button, .pilih, .item-meja';
+  let hoverEl = null;
+  document.addEventListener(
+    'pointerover',
+    (e) => {
+      const t = e.target.closest && e.target.closest(INTERAKTIF);
+      if (t && t !== hoverEl) {
+        hoverEl = t;
+        sfxHover();
+      }
+    },
+    true,
+  );
+  document.addEventListener(
+    'pointerout',
+    (e) => {
+      const t = e.target.closest && e.target.closest(INTERAKTIF);
+      if (t && t === hoverEl) hoverEl = null;
+    },
+    true,
+  );
+  document.addEventListener(
+    'click',
+    (e) => {
+      if (e.target.closest && e.target.closest(INTERAKTIF)) sfxKlik();
+    },
+    true,
+  );
 
   window.addEventListener('keydown', tekan);
   mulaiAbu();
@@ -553,6 +598,8 @@ function pulihkanSpriteEfek() {
 // brief.cho -> wajah kiri bawah; brief.ones -> wajah kanan bawah. Klip lain
 // atau berhenti -> kedua wajah disembunyikan.
 function onKlipBerubah(kunci) {
+  // Voice over berbunyi -> soundtrack ambient meredup; senyap -> kembali penuh.
+  redupAmbient(kunci != null);
   const diKartu = sesi && sesi.layar === 'kartu';
   el('wajah-cho').hidden = !(diKartu && kunci === 'brief.cho');
   el('wajah-ones').hidden = !(diKartu && kunci === 'brief.ones');
@@ -2171,6 +2218,7 @@ function tekan(ev) {
   if (cocok(key, P.bisu)) {
     ev.preventDefault();
     const dibisukan = toggleBisu();
+    setSfxBisu(dibisukan);
     toast(dibisukan ? 'Suara dibisukan' : 'Suara dihidupkan');
     return;
   }
